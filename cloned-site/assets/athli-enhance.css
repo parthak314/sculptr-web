@@ -1,0 +1,313 @@
+/* =============================================================================
+   Athli-style enhancements for the Sculptr (Framer) site
+   - Scroll-reactive floating navbar  (ported from Athli header.tsx)
+   - Footer                            (ported from Athli footer.tsx)
+   - Dark mode (hybrid: full-page invert + hand-tuned hero)
+   - Scroll-progress bar + back-to-top button
+   All injected DOM lives OUTSIDE [data-framer-root] so the dark-mode invert
+   never touches it. Edit freely — this file + athli-enhance.js are the only
+   two files that drive these features.
+   ========================================================================== */
+
+:root {
+  --ath-navy: rgb(15, 57, 139);
+  --ath-blue: rgb(0, 153, 255);
+  --ath-bright: rgb(0, 136, 255);
+  --ath-cyan-glow: rgba(0, 187, 255, 0.25);
+  --ath-font: "Hanken Grotesk", "Figtree", system-ui, -apple-system, sans-serif;
+
+  /* light-mode surface tokens */
+  --ath-fg: rgb(15, 57, 139);
+  --ath-fg-muted: rgba(15, 57, 139, 0.62);
+  --ath-nav-bg: rgba(255, 255, 255, 0.55);
+  --ath-nav-border: rgba(15, 57, 139, 0.12);
+  --ath-nav-shadow: 0 8px 30px rgba(15, 57, 139, 0.10);
+  --ath-panel-bg: rgba(255, 255, 255, 0.92);
+  --ath-footer-bg: rgba(247, 250, 255, 0.9);
+  --ath-footer-border: rgba(15, 57, 139, 0.10);
+}
+
+html.dark {
+  --ath-fg: rgba(235, 242, 255, 0.92);
+  --ath-fg-muted: rgba(200, 215, 245, 0.60);
+  --ath-nav-bg: rgba(12, 18, 34, 0.55);
+  --ath-nav-border: rgba(120, 170, 255, 0.16);
+  --ath-nav-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+  --ath-panel-bg: rgba(14, 20, 38, 0.96);
+  --ath-footer-bg: rgba(10, 15, 28, 0.92);
+  --ath-footer-border: rgba(120, 170, 255, 0.12);
+}
+
+/* -----------------------------------------------------------------------------
+   Hide Framer's built-in nav + footer (keep nav's reserved space to avoid shift)
+   -------------------------------------------------------------------------- */
+/* Generic + root-scoped so it works across pages regardless of Framer's
+   per-page generated class names. Our injected nav/footer live OUTSIDE
+   [data-framer-root] (appended to <body>), so they are never matched. */
+[data-framer-root] nav { visibility: hidden !important; pointer-events: none !important; }
+[data-framer-root] footer { display: none !important; }
+
+/* =============================================================================
+   NAVBAR
+   ========================================================================== */
+.ath-nav {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 1000;
+  width: 100%;
+  padding: 8px 8px 0;
+  box-sizing: border-box;
+  font-family: var(--ath-font);
+}
+.ath-nav__inner {
+  margin: 8px auto 0;
+  max-width: 1152px;            /* max-w-6xl */
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  transition: max-width .3s ease, background-color .3s ease, padding .3s ease,
+              border-color .3s ease, box-shadow .3s ease, backdrop-filter .3s ease;
+}
+/* Scrolled: shrink into a floating, blurred, bordered pill */
+.ath-nav.is-scrolled .ath-nav__inner {
+  max-width: 896px;             /* max-w-4xl */
+  padding: 10px 20px;
+  background: var(--ath-nav-bg);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  backdrop-filter: blur(16px) saturate(160%);
+  border-color: var(--ath-nav-border);
+  box-shadow: var(--ath-nav-shadow);
+}
+
+.ath-nav__logo { display: flex; align-items: center; flex-shrink: 0; }
+.ath-nav__logo img {
+  height: 52px; width: auto; display: block;
+  filter: drop-shadow(0 0 13px rgba(0, 136, 255, 0.35));
+}
+
+/* centered links (absolutely centered like Athli) */
+.ath-nav__links {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 32px;
+  list-style: none;
+  margin: 0; padding: 0;
+}
+.ath-nav__links a {
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  color: var(--ath-fg-muted);
+  transition: color .15s ease;
+  white-space: nowrap;
+}
+.ath-nav__links a:hover { color: var(--ath-fg); }
+
+.ath-nav__actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* buttons */
+.ath-btn {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform .15s ease, box-shadow .2s ease, background-color .2s ease,
+              border-color .2s ease, color .2s ease;
+  white-space: nowrap;
+}
+.ath-btn:active { transform: scale(0.97); }
+.ath-btn--primary {
+  background: linear-gradient(180deg, var(--ath-blue), var(--ath-navy));
+  color: #fff;
+  box-shadow: inset 0 0 30px var(--ath-cyan-glow), 0 6px 20px rgba(0, 136, 255, 0.25);
+}
+.ath-btn--primary:hover { box-shadow: inset 0 0 30px var(--ath-cyan-glow), 0 10px 28px rgba(0, 136, 255, 0.38); }
+.ath-btn--ghost {
+  background: transparent;
+  color: var(--ath-fg);
+  border-color: var(--ath-nav-border);
+}
+.ath-btn--ghost:hover { border-color: var(--ath-blue); color: var(--ath-blue); }
+
+/* icon buttons (theme toggle, hamburger) */
+.ath-icon-btn {
+  width: 38px; height: 38px;
+  border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--ath-nav-border);
+  color: var(--ath-fg);
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .15s ease;
+}
+.ath-icon-btn:hover { border-color: var(--ath-blue); color: var(--ath-blue); }
+.ath-icon-btn:active { transform: scale(0.92); }
+.ath-icon-btn svg { width: 18px; height: 18px; }
+
+/* theme toggle: show sun in dark mode, moon in light mode */
+.ath-theme-toggle .ath-icon-sun { display: none; }
+.ath-theme-toggle .ath-icon-moon { display: block; }
+html.dark .ath-theme-toggle .ath-icon-sun { display: block; }
+html.dark .ath-theme-toggle .ath-icon-moon { display: none; }
+
+/* hamburger only on mobile */
+.ath-nav__burger { display: none; }
+
+/* =============================================================================
+   MOBILE NAV
+   ========================================================================== */
+@media (max-width: 860px) {
+  .ath-nav__links { display: none; }
+  .ath-nav__actions .ath-btn--primary,
+  .ath-nav__actions .ath-theme-toggle { display: none; }
+  .ath-nav__burger { display: inline-flex; }
+
+  .ath-mobile-panel {
+    position: fixed;
+    inset: 70px 8px auto 8px;
+    z-index: 999;
+    background: var(--ath-panel-bg);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--ath-nav-border);
+    border-radius: 20px;
+    box-shadow: 0 20px 50px rgba(15, 57, 139, 0.18);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    opacity: 0;
+    transform: translateY(-12px) scale(0.98);
+    pointer-events: none;
+    transition: opacity .22s ease, transform .22s ease;
+    font-family: var(--ath-font);
+  }
+  .ath-mobile-panel.is-open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+  .ath-mobile-panel a.ath-mobile-link {
+    font-size: 17px; font-weight: 500; text-decoration: none; color: var(--ath-fg);
+  }
+  .ath-mobile-panel a.ath-mobile-link:hover { color: var(--ath-blue); }
+  .ath-mobile-panel .ath-mobile-row { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+  .ath-mobile-panel .ath-btn--primary { flex: 1; }
+}
+.ath-mobile-panel { display: none; }
+@media (max-width: 860px) { .ath-mobile-panel { display: flex; } }
+
+/* =============================================================================
+   FOOTER
+   ========================================================================== */
+.ath-footer {
+  font-family: var(--ath-font);
+  background: var(--ath-footer-bg);
+  border-top: 1px solid var(--ath-footer-border);
+  padding: 72px 24px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.ath-footer__inner { max-width: 1024px; margin: 0 auto; text-align: center; }
+.ath-footer__logo { display: inline-flex; }
+.ath-footer__logo img { height: 44px; width: auto; filter: drop-shadow(0 0 13px rgba(0,136,255,0.30)); }
+.ath-footer__links {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 24px;
+  margin: 32px 0;
+}
+.ath-footer__links a {
+  font-size: 14px; text-decoration: none; color: var(--ath-fg-muted);
+  transition: color .15s ease;
+}
+.ath-footer__links a:hover { color: var(--ath-blue); }
+.ath-footer__social { display: flex; flex-wrap: wrap; justify-content: center; gap: 22px; margin: 32px 0; }
+.ath-footer__social a { color: var(--ath-fg-muted); transition: color .15s ease, transform .15s ease; }
+.ath-footer__social a:hover { color: var(--ath-blue); transform: translateY(-2px); }
+.ath-footer__social svg { width: 22px; height: 22px; display: block; }
+.ath-footer__copy { font-size: 13px; color: var(--ath-fg-muted); margin: 0; }
+
+/* =============================================================================
+   SCROLL PROGRESS BAR + BACK TO TOP
+   ========================================================================== */
+.ath-progress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+  z-index: 1001;
+  background: linear-gradient(90deg, var(--ath-blue), var(--ath-bright), rgb(0, 187, 255));
+  box-shadow: 0 0 12px var(--ath-cyan-glow);
+  transition: width .08s linear;
+}
+.ath-totop {
+  position: fixed; right: 22px; bottom: 22px; z-index: 1000;
+  width: 46px; height: 46px; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; border: 1px solid var(--ath-nav-border);
+  background: linear-gradient(180deg, var(--ath-blue), var(--ath-navy));
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 136, 255, 0.35);
+  opacity: 0; transform: translateY(12px) scale(0.9); pointer-events: none;
+  transition: opacity .25s ease, transform .25s ease, box-shadow .2s ease;
+}
+.ath-totop.is-visible { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+.ath-totop:hover { box-shadow: 0 12px 30px rgba(0, 136, 255, 0.5); }
+.ath-totop:active { transform: scale(0.92); }
+.ath-totop svg { width: 20px; height: 20px; }
+
+/* =============================================================================
+   DARK MODE  (hybrid: full-page invert + media re-correction + hero tuning)
+   ========================================================================== */
+html.dark { background: rgb(8, 11, 22); }
+html.dark body { background: rgb(8, 11, 22); }
+
+/* Invert the entire Framer page content.
+   NB: we filter #main (the Framer wrapper) rather than [data-framer-root].
+   The framer-root element has compositing props that make a filter on it a
+   visual no-op; #main is its parent with the same box and inverts reliably.
+   Our injected nav/footer are siblings of #main, so they're untouched. */
+html.dark #main {
+  filter: invert(1) hue-rotate(180deg);
+  background: rgb(8, 11, 22);
+}
+/* ...then re-invert real raster media so photos/video/logo/canvas stay
+   true-colour. IMPORTANT: correct at exactly ONE level (the media element
+   itself). Do NOT also target image *wrappers* or a broad
+   [style*="background-image"] — a full-viewport background wrapper exists and
+   would re-invert the whole page (cancelling dark mode), and wrapper+img
+   together would double-invert photos. */
+html.dark #main img,
+html.dark #main video,
+html.dark #main canvas,
+html.dark #main svg image {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* --- Hero hand-tuning -------------------------------------------------------
+   The hero's "Gradient Blur" canvas drives the colourful top glow. After the
+   global invert it can read a touch flat, so we soften it and lay a deliberate
+   brand-blue radial glow behind the top of the page. Tune these two rules to
+   taste — this is the area most worth a manual pass. */
+html.dark .framer-lbyv5o { opacity: 0.55; mix-blend-mode: screen; }
+html.dark #main::before {
+  content: "";
+  position: absolute; inset: 0 0 auto 0; height: 720px;
+  pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(60% 60% at 50% 0%, rgba(0, 136, 255, 0.20), transparent 70%),
+    radial-gradient(40% 40% at 80% 10%, rgba(0, 187, 255, 0.12), transparent 70%);
+  /* counter the parent invert so this glow renders as intended */
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Honour reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .ath-nav__inner, .ath-progress, .ath-totop, .ath-mobile-panel, .ath-btn { transition: none; }
+}
