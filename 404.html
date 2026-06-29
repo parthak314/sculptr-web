@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en-US">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 — Page not found · Sculptr</title>
+  <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700&display=swap">
+  <style>
+    :root { --navy: rgb(15, 57, 139); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: "Satoshi", "Inter", system-ui, -apple-system, sans-serif;
+      background: #ffffff; color: var(--navy);
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+    }
+    .wrap { position: relative; min-height: 100svh; width: 100%; overflow: hidden; background: #fff; }
+
+    /* animated dot-matrix backdrop (matches the app sign-in / 404 background) */
+    #dots { position: fixed; inset: 0; z-index: 0; display: block; }
+    .mask-top    { position: absolute; left: 0; right: 0; top: 0;    height: 25.5%; background: linear-gradient(to bottom, #fff, transparent); z-index: 1; pointer-events: none; }
+    .mask-bottom { position: absolute; left: 0; right: 0; bottom: 0; height: 25.5%; background: linear-gradient(to top,    #fff, transparent); z-index: 1; pointer-events: none; }
+    .mask-radial { position: absolute; inset: 0; background: radial-gradient(circle at center, rgba(255,255,255,1) 0%, transparent 100%); z-index: 1; pointer-events: none; }
+
+    .content {
+      position: relative; z-index: 10; min-height: 100svh;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 0 24px;
+    }
+    .logo { margin-bottom: 32px; display: inline-block; line-height: 0; }
+    .logo img { height: 1.7rem; width: auto; display: block; }
+
+    .num {
+      font-weight: 300; letter-spacing: -0.04em; line-height: 1.02em; font-size: 5.5rem;
+      background-image: linear-gradient(161deg, rgb(255,255,255) -42%, rgb(21,96,189) 100%);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+    }
+    .heading { margin-top: 12px; font-size: 1.5rem; line-height: 1.2; font-weight: 700; letter-spacing: -0.02em; color: var(--navy); }
+    .sub { margin-top: 8px; max-width: 24rem; font-size: 15px; line-height: 1.6; color: rgba(15,57,139,0.55); }
+    @media (min-width: 640px) { .num { font-size: 9rem; } .heading { font-size: 1.875rem; } }
+
+    .btn {
+      margin-top: 36px; display: inline-flex; height: 44px; align-items: center; justify-content: center;
+      gap: 8px; border-radius: 9999px; padding: 0 28px; font-size: 14px; font-weight: 600;
+      color: var(--navy); text-decoration: none; border: 0; cursor: pointer;
+      background: rgba(148, 212, 255, 0.75);
+      -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+      box-shadow: 0 0 10px 0 rgba(148,212,255,0.45), 0 0 26px 6px rgba(148,212,255,0.28);
+      transition: box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .btn:hover { box-shadow: 0 0 18px 4px rgba(148,212,255,0.95), 0 0 40px 10px rgba(148,212,255,0.6); }
+    .btn svg { width: 16px; height: 16px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <canvas id="dots"></canvas>
+    <div class="mask-top"></div>
+    <div class="mask-bottom"></div>
+    <div class="mask-radial"></div>
+
+    <div class="content">
+      <a class="logo" href="./" aria-label="Sculptr home">
+        <img src="https://framerusercontent.com/images/2s5IeQ3VOaEwTjCOKM1C7rUbF2Q.png" alt="Sculptr">
+      </a>
+      <div class="num">404</div>
+      <p class="heading">This page could not be found.</p>
+      <p class="sub">The page you&rsquo;re looking for doesn&rsquo;t exist or may have moved.</p>
+      <a class="btn" href="./">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>
+        Back to home
+      </a>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var c = document.getElementById("dots"), x = c.getContext("2d");
+      var CELL = 20, DOT = 6, COLOR = "0,153,255";
+      var RAMP = [0, 0, 0, 0, 0.35, 0.5, 0.65, 0.8, 1, 1];
+      var dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      var cols, rows, cur, tgt, W, H;
+      function pick() { return RAMP[(Math.random() * RAMP.length) | 0]; }
+      function resize() {
+        W = window.innerWidth; H = window.innerHeight;
+        c.width = Math.floor(W * dpr); c.height = Math.floor(H * dpr);
+        c.style.width = W + "px"; c.style.height = H + "px";
+        x.setTransform(dpr, 0, 0, dpr, 0, 0);
+        cols = Math.ceil(W / CELL) + 1; rows = Math.ceil(H / CELL) + 1;
+        cur = new Float32Array(cols * rows); tgt = new Float32Array(cols * rows);
+        for (var i = 0; i < tgt.length; i++) { cur[i] = tgt[i] = pick(); }
+      }
+      function reroll() { for (var i = 0; i < tgt.length; i++) tgt[i] = pick(); }
+      var last = 0, acc = 0;
+      function frame(t) {
+        if (!last) last = t; var dt = (t - last) / 1000; last = t; acc += dt;
+        if (acc > 0.45) { acc = 0; reroll(); }
+        x.clearRect(0, 0, W, H);
+        var lerp = Math.min(1, dt * 6);
+        for (var gy = 0; gy < rows; gy++) {
+          for (var gx = 0; gx < cols; gx++) {
+            var i = gy * cols + gx;
+            cur[i] += (tgt[i] - cur[i]) * lerp;
+            if (cur[i] > 0.01) {
+              x.fillStyle = "rgba(" + COLOR + "," + cur[i].toFixed(3) + ")";
+              x.fillRect(gx * CELL, gy * CELL, DOT, DOT);
+            }
+          }
+        }
+        requestAnimationFrame(frame);
+      }
+      resize(); window.addEventListener("resize", resize); requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
