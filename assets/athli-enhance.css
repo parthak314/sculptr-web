@@ -1151,3 +1151,7 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
 @media (max-width: 760px) {
   .ath-calc__grid { grid-template-columns: 1fr; gap: 22px; }
 }
+
+/* PRODUCTION (main) ONLY: hide the testimonials + traction strip (kept in
+   the code, just hidden via CSS). The website-preview branch keeps them. */
+.ath-below { display: none !important; }
