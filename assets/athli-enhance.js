@@ -1220,6 +1220,8 @@
        shimmer via CSS). Self-stops if the grid is removed; pauses when hidden. */
     function cgActivity(grid) {
       if (!grid || grid.__live) return;
+      // mobile: skip the continuous "commit" pulses (perf) — letters still draw in
+      try { if (window.matchMedia && window.matchMedia("(max-width: 860px)").matches) return; } catch (e) {}
       grid.__live = true;
       var amb = [].slice.call(grid.querySelectorAll(".ath-cg-cell:not(.is-on)"));
       var TINTS = ["rgba(0,153,255,0.58)", "rgba(58,147,242,0.62)", "rgba(21,96,189,0.5)", "rgba(0,153,255,0.3)", "rgba(13,68,153,0.45)"];
