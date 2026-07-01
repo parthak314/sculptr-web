@@ -1230,10 +1230,10 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
      up-front (no scroll-jump) and remembers the real size after first render.
      Heights measured live at 393px. NB: `.framer-f786x8` is a Framer-hashed class
      (the FAQ) — re-measure if the site is ever re-exported from Framer. */
-  .ath-stats      { content-visibility: auto; contain-intrinsic-size: auto 1157px; }
-  .ath-calc       { content-visibility: auto; contain-intrinsic-size: auto 717px; }
+  .ath-stats      { content-visibility: auto; contain-intrinsic-size: auto 1060px; }
+  .ath-calc       { content-visibility: auto; contain-intrinsic-size: auto 770px; }
   .framer-f786x8  { content-visibility: auto; contain-intrinsic-size: auto 379px; }
-  .ath-cg-section { content-visibility: auto; contain-intrinsic-size: auto 174px; }
+  .ath-cg-section { content-visibility: auto; contain-intrinsic-size: auto 220px; }
 
   /* P4 — Dark mode is currently dormant (toggle not wired), but if it is ever
      enabled the full-page filter:invert() would instantly crash a phone. Never
@@ -1245,4 +1245,36 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   html.dark #main canvas,
   html.dark #main svg image,
   html.dark #main::before { filter: none !important; -webkit-filter: none !important; }
+}
+
+/* =============================================================================
+   PHONE (<=600px): more compact rhythm + standard mobile sizing.
+   The injected sections carried desktop-scaled padding and headings that hit
+   their clamp minimums (~60px section padding, 40px titles, 28px card insets) —
+   too airy on a phone. Tighten section spacing, card insets and headings, and
+   dial the busy background particles down. Phone-only; tablet + desktop are
+   untouched (they never match this query).
+   ========================================================================== */
+@media (max-width: 600px) {
+  /* tighter vertical rhythm between sections */
+  .ath-how-head   { padding-top: 34px; }
+  .ath-stats      { padding: 36px 16px; }
+  .ath-calc       { padding-bottom: 44px; }
+  .ath-cg-section { padding-top: 12px; padding-bottom: 36px; }
+  .ath-footer     { padding-top: 28px; padding-bottom: 28px; }
+
+  /* tighter card insets */
+  .ath-stats__card { padding: 20px; }
+  .ath-calc__card  { padding: 20px; }
+
+  /* standard phone heading sizes (down from the desktop-scaled clamps) */
+  .ath-how-title    { font-size: 28px; }
+  .ath-stats__title { font-size: 30px; margin-bottom: 18px; }
+  .ath-stats__big   { font-size: 36px; }
+
+  /* Fewer / less-busy background particles. The literal particle COUNT lives in
+     the Framer WebGL component (not settable from CSS), so soften the canvas so
+     the field reads sparser and calmer behind the content. Tune the opacity (or
+     remove) to taste. */
+  #main [data-framer-name="Gradient Blur"] canvas { opacity: 0.45 !important; }
 }
