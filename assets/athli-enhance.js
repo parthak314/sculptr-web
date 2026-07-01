@@ -238,7 +238,21 @@
       }
     }
     strip();
-    try { new MutationObserver(strip).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) {}
+    /* Watch cheaply: debounce to once-per-frame (a raw observer here ran a
+       document-wide querySelectorAll on EVERY mutation — a constant main-thread
+       tax that competed with scrolling), scope to <body>, and disconnect once
+       things have settled. The edit bar only injects in Framer's editor context,
+       so continuous observation in production is pure overhead. */
+    try {
+      var scheduled = false;
+      var obs = new MutationObserver(function () {
+        if (scheduled) return;
+        scheduled = true;
+        requestAnimationFrame(function () { scheduled = false; strip(); });
+      });
+      obs.observe(document.body, { childList: true, subtree: true });
+      setTimeout(function () { try { obs.disconnect(); } catch (e) {} }, 30000);
+    } catch (e) {}
   }
 
   /* --------------------- relabel hero CTA --------------------------------- */
@@ -289,7 +303,12 @@
     var EASE_OUT = "cubic-bezier(0.7, 0, 0.84, 0)";
     var BASE_SIZE = 32;   // px target; scaled down so the longest phrase fits one line
     var reduce = false;
-    try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+    try {
+      // Phones use the cheap opacity fade below (no per-letter blur / 3D perspective),
+      // which was a sustained GPU cost on the hero. Same path as reduced-motion.
+      reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        || window.matchMedia("(max-width: 860px)").matches;
+    } catch (e) {}
 
     function findSubtext() {
       var ps = document.querySelectorAll("p.framer-text");
@@ -338,6 +357,15 @@
       // (now empty) line to the next width; only after that glide finishes does the
       // next phrase fly in.
       function advanceTo(nextIdx) {
+        // Don't cycle a backgrounded tab — resume when it's visible again.
+        if (document.hidden) {
+          document.addEventListener("visibilitychange", function once() {
+            if (document.hidden) return;
+            document.removeEventListener("visibilitychange", once);
+            advanceTo(nextIdx);
+          });
+          return;
+        }
         state.current = TAGLINE_PHRASES[nextIdx];
         var targetW = widthFor(TAGLINE_PHRASES[nextIdx]);
         var startW = Math.round(slot.getBoundingClientRect().width);
@@ -471,9 +499,13 @@
       about.style.display = "none";                 // get rid of the body of text
       var anchor = about.closest('[data-framer-name="Container"]') || about;
       if (!document.querySelector(".ath-heroshot") && anchor.parentNode) {
+        // Phones get a 900px webp (~19KB, ~10x less decode RAM) instead of the
+        // full 2818px hero — a real saving in scroll-time memory. Desktop keeps
+        // the full-res webp; jpg is the universal fallback.
+        var sourceMobile = el("source", { srcset: "assets/hero-app-mobile.webp", type: "image/webp", media: "(max-width: 860px)" });
         var source = el("source", { srcset: "assets/hero-app.webp", type: "image/webp" });
         var img = el("img", { class: "ath-heroshot__img", src: "assets/hero-app.jpg", alt: "Sculptr Studio — 2D consult", decoding: "async" });
-        var pic = el("picture", null, [source, img]);
+        var pic = el("picture", null, [sourceMobile, source, img]);
         var frame = el("div", { class: "ath-heroshot__frame" }, [pic]);
         var wrap = el("div", { class: "ath-heroshot" }, [frame]);
         anchor.parentNode.insertBefore(wrap, anchor);
