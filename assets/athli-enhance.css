@@ -1186,3 +1186,63 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
      animation on ~100 commit-grid cells). */
   .ath-cg-wrap.is-lit .ath-cg-cell.is-on { animation: ath-cg-pop .5s ease var(--d, 0s) both; }
 }
+
+/* =============================================================================
+   MOBILE OPTIMISATION — FRAMER CORE (GPU memory + scroll paint)
+   The block above only tames our own `.ath-*` layer; the rules below tame the
+   Framer-generated core, which is where the phone crashes-while-scrolling come
+   from (measured: 162 compositor layers, 79 blurred elements at 393px). All
+   phone-only; desktop is untouched.
+   ========================================================================== */
+@media (max-width: 860px) {
+  /* P0-A — Neutralise the ~60 decorative blurred radial-gradient "Glow" planes.
+     Each blur() forces its own composited GPU texture; on a phone they pile up
+     as you scroll and exhaust GPU memory (tab crash). The gradients are already
+     soft, so removing the blur is visually near-identical. */
+  #main [data-framer-name="Glow"] {
+    filter: none !important;
+    -webkit-filter: none !important;
+  }
+  /* The single large fixed hero glow ("Gradient Blur" = .framer-lbyv5o): keep the
+     soft look but cut the cost — a full-viewport blur(80px) is one of the most
+     expensive mobile paint ops. */
+  #main [data-framer-name="Gradient Blur"] {
+    filter: blur(20px) !important;
+    -webkit-filter: blur(20px) !important;
+  }
+
+  /* P0-B — Stop Framer speculatively promoting ~50 compositor layers. Framer
+     drives will-change through these two custom properties; forcing them to
+     `auto` collapses the variable-driven promotions (the few genuinely-animating
+     appear elements use a hard-coded will-change:transform and are left alone). */
+  #main {
+    --framer-will-change-override: auto;
+    --framer-will-change-effect-override: auto;
+  }
+  /* The tagline runs the cheap opacity fade on phones (P3), so the per-letter
+     3D/blur compositor hints on its ~44 letter spans are pure wasted GPU layers. */
+  .ath-flux, .ath-flux__phrase, .ath-ch, .ath-num { will-change: auto !important; }
+
+  /* P1 — Defer rendering of the below-fold sections until they near the viewport
+     (content-visibility:auto ⇒ the browser skips their layout/paint/compositing
+     and image decode entirely while off-screen). Biggest win for scroll load +
+     memory. `contain-intrinsic-size: auto <measured>px` reserves the right height
+     up-front (no scroll-jump) and remembers the real size after first render.
+     Heights measured live at 393px. NB: `.framer-f786x8` is a Framer-hashed class
+     (the FAQ) — re-measure if the site is ever re-exported from Framer. */
+  .ath-stats      { content-visibility: auto; contain-intrinsic-size: auto 1157px; }
+  .ath-calc       { content-visibility: auto; contain-intrinsic-size: auto 717px; }
+  .framer-f786x8  { content-visibility: auto; contain-intrinsic-size: auto 379px; }
+  .ath-cg-section { content-visibility: auto; contain-intrinsic-size: auto 174px; }
+
+  /* P4 — Dark mode is currently dormant (toggle not wired), but if it is ever
+     enabled the full-page filter:invert() would instantly crash a phone. Never
+     run the whole-page filter on mobile; media re-inversion and the counter-invert
+     glow become no-ops too. */
+  html.dark #main { filter: none !important; -webkit-filter: none !important; background: rgb(8, 11, 22); }
+  html.dark #main img,
+  html.dark #main video,
+  html.dark #main canvas,
+  html.dark #main svg image,
+  html.dark #main::before { filter: none !important; -webkit-filter: none !important; }
+}
