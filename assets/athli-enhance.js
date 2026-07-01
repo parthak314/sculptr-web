@@ -35,6 +35,31 @@
   var THEME_KEY = "sculptr-theme";
   var SVGNS = "http://www.w3.org/2000/svg";
 
+  /* --- Mobile: gently slow the continuous WebGL background ("particles") -------
+     They read too fast on small screens; desktop is left exactly as-is. On phones
+     we scale the timestamp handed to rAF callbacks so time-based loops (the
+     endless particle shader) advance more slowly. RAF0 is the ORIGINAL, unscaled
+     rAF — our own count-up / dial / swap loops use it so their speed is unchanged,
+     and scaling only kicks in ~1.8s after load so the hero's one-shot fade-ins
+     play at full speed first. Tune SLOW_FACTOR (or delete this block) to taste. */
+  var RAF0 = window.requestAnimationFrame
+    ? window.requestAnimationFrame.bind(window)
+    : function (f) { return setTimeout(function () { f(Date.now()); }, 16); };
+  (function slowBackgroundOnMobile() {
+    var isMobile = false;
+    try { isMobile = window.matchMedia && window.matchMedia("(max-width: 860px)").matches; } catch (e) {}
+    if (!isMobile || !window.requestAnimationFrame) return;
+    var SLOW_FACTOR = 0.55, base = null, active = false;
+    setTimeout(function () { active = true; }, 1800);
+    window.requestAnimationFrame = function (cb) {
+      return RAF0(function (t) {
+        if (!active) return cb(t);
+        if (base === null) base = t;
+        cb(base + (t - base) * SLOW_FACTOR);
+      });
+    };
+  })();
+
   /* ----------------------------- helpers ---------------------------------- */
   function el(tag, attrs, kids) {
     var n = document.createElement(tag);
@@ -815,9 +840,9 @@
         if (start == null) start = ts;
         var t = Math.min(1, (ts - start) / dur);
         el.textContent = fmt(el, t >= 1 ? to : from + (to - from) * springEase(t));
-        if (t < 1) requestAnimationFrame(frame);
+        if (t < 1) RAF0(frame);
       }
-      requestAnimationFrame(frame);
+      RAF0(frame);
     }
     /* gauge dial: light the first `value` ticks (each tick ~= one minute).
        On scroll it winds from 30 down to 15 — the consultation getting shorter. */
@@ -834,9 +859,9 @@
         if (start == null) start = ts;
         var t = Math.min(1, (ts - start) / dur);
         setDial(dial, DIAL_FROM + (DIAL_TO - DIAL_FROM) * springEase(t));
-        if (t < 1) requestAnimationFrame(frame);
+        if (t < 1) RAF0(frame);
       }
-      requestAnimationFrame(frame);
+      RAF0(frame);
     }
     function prefersReduced() {
       try { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
@@ -1300,9 +1325,9 @@
         node.textContent = fmtN(to * e, dec, group) + suffix;
         node.style.filter = "blur(" + (6 * (1 - e)).toFixed(2) + "px)";
         node.style.transform = "translateY(" + (8 * (1 - e)).toFixed(2) + "px)";
-        if (t < 1) requestAnimationFrame(frame); else setFinal(node);
+        if (t < 1) RAF0(frame); else setFinal(node);
       }
-      requestAnimationFrame(frame);
+      RAF0(frame);
     }
 
     /* Interactions are wired via delegation on `document` (attached ONCE), so
