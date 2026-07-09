@@ -934,8 +934,12 @@
       var topCounts = sec.querySelectorAll(".ath-stats__big.ath-count, .ath-stats__bar-val.ath-count");
       var leftCounts = sec.querySelectorAll(".ath-stats__panel--tall:not(.ath-stats__panel--time) .ath-count");
       var rightCounts = sec.querySelectorAll(".ath-stats__panel--time .ath-count");
-      // reduced motion: snap everything to final, no animation
-      if (prefersReduced()) {
+      // Reduced motion — and ALL phones: snap everything to final, no animation.
+      // On phones the stats count-up is dropped entirely (the markup already
+      // holds the final values, so the numbers simply read correct from the
+      // start). The ROI calculator's counter is deliberately kept — it is the
+      // one number animation that stays on phones.
+      if (prefersReduced() || PHONE_ANIM) {
         sec.classList.add("run-top"); sec.classList.add("run-left"); sec.classList.add("run-right");
         if (dial) setDial(dial, DIAL_TO);
         return;
