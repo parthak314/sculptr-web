@@ -1195,6 +1195,11 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
    phone-only; desktop is untouched.
    ========================================================================== */
 @media (max-width: 860px) {
+  /* Match the sped-up phone stats reveal (JS DUR 900ms): the bar/column fills are
+     CSS transitions that were 2s, so on phone they lagged the numbers. */
+  .ath-stats__bar-fill { transition: width .9s cubic-bezier(0.22,1,0.36,1) !important; }
+  .ath-stats__col-bar  { transition: height .9s cubic-bezier(0.22,1,0.36,1), opacity .4s ease !important; }
+
   /* P0-A — Neutralise the ~60 decorative blurred radial-gradient "Glow" planes.
      Each blur() forces its own composited GPU texture; on a phone they pile up
      as you scroll and exhaust GPU memory (tab crash). The gradients are already

@@ -907,7 +907,15 @@
       try { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
       catch (e) { return false; }
     }
-    var DUR = 2000;
+    /* Phones: the reveal used to fire only once the section was 35% into view and
+       then play a 6s staggered sequence — so on a phone it hadn't finished (often
+       hadn't started) by the time you scrolled to it. Fire as it enters and run it
+       ~4x faster with the three groups overlapping. Desktop is unchanged. */
+    var PHONE_ANIM = false;
+    try { PHONE_ANIM = window.matchMedia && window.matchMedia("(max-width: 860px)").matches; } catch (e) {}
+    var DUR = PHONE_ANIM ? 900 : 2000;
+    var STAGGER = PHONE_ANIM ? 240 : 2000;       // gap between the 3 groups
+    var REVEAL_MARGIN = PHONE_ANIM ? "0px 0px -6% 0px" : "0px 0px -35% 0px";
     function reveal(sec) {
       var dial = sec.querySelector(".ath-dial");
       var allCounts = sec.querySelectorAll(".ath-count");
@@ -933,15 +941,15 @@
           setTimeout(function () {
             sec.classList.add("run-right"); run(rightCounts);    // 3) dial card
             if (dial) animateDial(dial, DUR);
-          }, DUR);
-        }, DUR);
+          }, STAGGER);
+        }, STAGGER);
       }
       try {
         var io = new IntersectionObserver(function (entries) {
           for (var k = 0; k < entries.length; k++) {
             if (entries[k].isIntersecting) { io.disconnect(); go(); break; }
           }
-        }, { threshold: 0, rootMargin: "0px 0px -35% 0px" }); // fire once well into view, not on first peek
+        }, { threshold: 0, rootMargin: REVEAL_MARGIN }); // desktop: well into view; phone: as it enters
         io.observe(sec);
       } catch (e) { go(); }
     }
