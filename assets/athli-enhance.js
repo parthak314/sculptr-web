@@ -35,16 +35,30 @@
   var THEME_KEY = "sculptr-theme";
   var SVGNS = "http://www.w3.org/2000/svg";
 
-  /* --- Mobile: gently slow the continuous WebGL background ("particles") -------
-     They read too fast on small screens; desktop is left exactly as-is. On phones
-     we scale the timestamp handed to rAF callbacks so time-based loops (the
-     endless particle shader) advance more slowly. RAF0 is the ORIGINAL, unscaled
-     rAF — our own count-up / dial / swap loops use it so their speed is unchanged,
-     and scaling only kicks in ~1.8s after load so the hero's one-shot fade-ins
-     play at full speed first. Tune SLOW_FACTOR (or delete this block) to taste. */
+  /* RAF0: direct reference to requestAnimationFrame used by our own animation
+     loops (count-ups, dial, testimonial swaps). */
   var RAF0 = window.requestAnimationFrame
     ? window.requestAnimationFrame.bind(window)
     : function (f) { return setTimeout(function () { f(Date.now()); }, 16); };
+
+  /* --- Phones: don't run the WebGL particle background at all ----------------
+     The particles are a position:fixed canvas that stays on screen for the WHOLE
+     scroll, re-rendering through a live blur() every frame — the single biggest
+     continuous GPU load on the page, and phones kept OOM-crashing mid-scroll even
+     after everything else was trimmed. Returning null from getContext for WebGL
+     makes the Framer effect bail out gracefully (standard no-WebGL fallback), and
+     the CSS paints a static glow in its place, so the hero still reads the same.
+     Desktop is untouched: full particles, full speed. */
+  (function noPhoneWebGL() {
+    try {
+      if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
+      var orig = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type) {
+        if (type === "webgl" || type === "webgl2" || type === "experimental-webgl") return null;
+        return orig.apply(this, arguments);
+      };
+    } catch (e) {}
+  })();
   /* Phones: cap the pixel ratio the Framer runtime sees at 2 (some phones are 3x).
      The background particle canvas sizes its GL framebuffer from this, and it is a
      position:fixed layer that re-renders through a live blur() on EVERY frame of
@@ -83,21 +97,6 @@
     }
     setTimeout(strip, 4000);
     setTimeout(strip, 10000);
-  })();
-
-  (function slowBackgroundOnMobile() {
-    var isMobile = false;
-    try { isMobile = window.matchMedia && window.matchMedia("(max-width: 860px)").matches; } catch (e) {}
-    if (!isMobile || !window.requestAnimationFrame) return;
-    var SLOW_FACTOR = 0.55, base = null, active = false;
-    setTimeout(function () { active = true; }, 1800);
-    window.requestAnimationFrame = function (cb) {
-      return RAF0(function (t) {
-        if (!active) return cb(t);
-        if (base === null) base = t;
-        cb(base + (t - base) * SLOW_FACTOR);
-      });
-    };
   })();
 
   /* ----------------------------- helpers ---------------------------------- */

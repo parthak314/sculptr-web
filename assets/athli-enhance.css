@@ -1235,13 +1235,22 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
     filter: none !important;
     -webkit-filter: none !important;
   }
-  /* The single large fixed hero glow ("Gradient Blur" = .framer-lbyv5o): keep the
-     soft look but cut the cost — a full-viewport blur(80px) is one of the most
-     expensive mobile paint ops. */
+  /* The hero glow ("Gradient Blur" = .framer-lbyv5o): on phones the WebGL
+     particles inside it are disabled entirely (see noPhoneWebGL in the JS — the
+     fixed, always-on-screen canvas re-rendering through a live blur every frame
+     was what kept OOM-crashing phones mid-scroll). Paint a static brand glow in
+     its place; no filter at all, so the layer costs nothing per frame. */
   #main [data-framer-name="Gradient Blur"] {
-    filter: blur(20px) !important;
-    -webkit-filter: blur(20px) !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+    background:
+      radial-gradient(120% 90% at 50% 0%, rgba(0, 136, 255, 0.16), rgba(181, 225, 255, 0.05) 55%, rgba(255, 255, 255, 0) 78%) !important;
   }
+
+  /* The full-viewport fixed "noise" overlay (64px tile at 0.065 opacity) forces a
+     whole-screen composite blend on every scroll frame for a texture that is
+     effectively invisible on a phone. Drop it. */
+  .framer-13nk9po-container { display: none !important; }
 
   /* P0-B — Stop Framer speculatively promoting ~50 compositor layers. Framer
      drives will-change through these two custom properties; forcing them to
