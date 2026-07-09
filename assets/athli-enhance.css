@@ -1200,6 +1200,33 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   .ath-stats__bar-fill { transition: width .9s cubic-bezier(0.22,1,0.36,1) !important; }
   .ath-stats__col-bar  { transition: height .9s cubic-bezier(0.22,1,0.36,1), opacity .4s ease !important; }
 
+  /* While a number is actively counting, paint it solid: these are gradient text
+     (background-clip:text), and every text write re-rasters the whole clipped
+     gradient — 60x/s across several counters right as the section scrolls in was
+     crashing the GPU process on phones. The JS restores the gradient on the final
+     frame, so the settled look is pixel-identical. */
+  .ath-stats__big.is-counting,
+  .ath-num.is-counting {
+    background-image: none !important;
+    -webkit-text-fill-color: rgb(21, 96, 189) !important;
+    color: rgb(21, 96, 189) !important;
+  }
+
+  /* The stats/calc cards carry 90-100px-blur drop shadows; rasterising those the
+     moment the section renders mid-scroll allocates huge blur textures. Tighter
+     shadow, same floating feel. */
+  .ath-stats__card, .ath-calc__card {
+    box-shadow:
+      inset 0 2px 2px rgba(0,0,0,0.05),
+      inset 0 -2px 2px rgba(255,255,255,0.5),
+      inset 0 0 1px 2px rgba(255,255,255,0.5),
+      0 12px 28px -16px rgba(15,57,139,0.35) !important;
+  }
+
+  /* ~40 dial ticks each gain a drop-shadow() filter layer during the reveal —
+     drop the glow on phones (ticks still light up in the brand gradient). */
+  .ath-dial-tick.is-on { filter: none !important; }
+
   /* P0-A — Neutralise the ~60 decorative blurred radial-gradient "Glow" planes.
      Each blur() forces its own composited GPU texture; on a phone they pile up
      as you scroll and exhaust GPU memory (tab crash). The gradients are already

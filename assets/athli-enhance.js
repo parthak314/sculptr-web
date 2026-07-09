@@ -876,11 +876,22 @@
       var to = parseFloat(el.getAttribute("data-to")) || 0;
       var from = parseFloat(el.getAttribute("data-from")) || 0;
       var start = null;
+      var n = 0;
+      /* Phones: these numbers are gradient text (background-clip:text), and every
+         text write re-rasters the whole clipped gradient. Doing that 60x/s across
+         several counters right as the section scrolls in was crashing the GPU
+         process. Count in solid colour (.is-counting) at ~20fps and restore the
+         gradient on the final frame — the settled look is identical. */
+      if (PHONE_ANIM) el.classList.add("is-counting");
       function frame(ts) {
         if (start == null) start = ts;
         var t = Math.min(1, (ts - start) / dur);
-        el.textContent = fmt(el, t >= 1 ? to : from + (to - from) * springEase(t));
+        n++;
+        if (t >= 1 || !PHONE_ANIM || n % 3 === 0) {
+          el.textContent = fmt(el, t >= 1 ? to : from + (to - from) * springEase(t));
+        }
         if (t < 1) RAF0(frame);
+        else if (PHONE_ANIM) el.classList.remove("is-counting");
       }
       RAF0(frame);
     }
@@ -1032,22 +1043,34 @@
       + '</div>'
     + '</div>';
 
+    /* Phones: the output is gradient text (background-clip:text); writing its text
+       AND a blur() filter every frame re-rasters the clipped gradient through a
+       Gaussian 60x/s — a GPU spike that contributed to the mid-scroll tab crash.
+       On phones: no blur chase, solid colour while counting, ~20fps writes. */
+    var CHASE_PHONE = false;
+    try { CHASE_PHONE = window.matchMedia && window.matchMedia("(max-width: 860px)").matches; } catch (e) {}
     function chaser(node) {
-      var cur = 0, target = 0, raf = null;
+      var cur = 0, target = 0, raf = null, n = 0;
       function tick() {
         var d = target - cur;
-        if (Math.abs(d) < 0.5) { cur = target; node.textContent = money(cur); node.style.filter = ""; raf = null; return; }
+        if (Math.abs(d) < 0.5) {
+          cur = target; node.textContent = money(cur); node.style.filter = "";
+          node.classList.remove("is-counting"); raf = null; return;
+        }
         cur += d * 0.18;
-        node.textContent = money(cur);
-        var rem = Math.abs(target - cur) / (Math.abs(target) || 1);
-        node.style.filter = "blur(" + Math.min(5, rem * 45).toFixed(2) + "px)";
+        n++;
+        if (!CHASE_PHONE || n % 3 === 0) node.textContent = money(cur);
+        if (!CHASE_PHONE) {
+          var rem = Math.abs(target - cur) / (Math.abs(target) || 1);
+          node.style.filter = "blur(" + Math.min(5, rem * 45).toFixed(2) + "px)";
+        }
         raf = requestAnimationFrame(tick);
       }
       return {
         set: function (v) {
           target = v;
-          if (reduced()) { cur = v; node.textContent = money(v); node.style.filter = ""; if (raf) { cancelAnimationFrame(raf); raf = null; } return; }
-          if (raf == null) raf = requestAnimationFrame(tick);
+          if (reduced()) { cur = v; node.textContent = money(v); node.style.filter = ""; node.classList.remove("is-counting"); if (raf) { cancelAnimationFrame(raf); raf = null; } return; }
+          if (raf == null) { if (CHASE_PHONE) node.classList.add("is-counting"); raf = requestAnimationFrame(tick); }
         }
       };
     }
