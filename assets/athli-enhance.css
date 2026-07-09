@@ -1231,9 +1231,13 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
      Heights measured live at 393px. NB: `.framer-f786x8` is a Framer-hashed class
      (the FAQ) — re-measure if the site is ever re-exported from Framer. */
   .ath-stats      { content-visibility: auto; contain-intrinsic-size: auto 1060px; }
-  .ath-calc       { content-visibility: auto; contain-intrinsic-size: auto 770px; }
-  .framer-f786x8  { content-visibility: auto; contain-intrinsic-size: auto 379px; }
-  .ath-cg-section { content-visibility: auto; contain-intrinsic-size: auto 220px; }
+  .ath-calc       { content-visibility: auto; contain-intrinsic-size: auto 820px; }
+  .framer-f786x8  { content-visibility: auto; contain-intrinsic-size: auto 410px; }
+  /* Scan/Sculpt/Satisfy feature cards — 980px of always-rendered content missed in
+     the first pass (it hides inside a display:contents ssr-variant wrapper, so it
+     never showed up as a root child). Framer-hashed class too — re-check on re-export. */
+  .framer-1pkm4pd-container { content-visibility: auto; contain-intrinsic-size: auto 980px; }
+  .ath-cg-section { content-visibility: auto; contain-intrinsic-size: auto 250px; }
 
   /* P4 — Dark mode is currently dormant (toggle not wired), but if it is ever
      enabled the full-page filter:invert() would instantly crash a phone. Never

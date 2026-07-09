@@ -45,6 +45,46 @@
   var RAF0 = window.requestAnimationFrame
     ? window.requestAnimationFrame.bind(window)
     : function (f) { return setTimeout(function () { f(Date.now()); }, 16); };
+  /* Phones: cap the pixel ratio the Framer runtime sees at 2 (some phones are 3x).
+     The background particle canvas sizes its GL framebuffer from this, and it is a
+     position:fixed layer that re-renders through a live blur() on EVERY frame of
+     the whole scroll — at 3x that pipeline pushes low-RAM phones over the edge
+     (tab crash mid-scroll). At 2x, behind the blur + reduced opacity, the
+     difference is imperceptible; the per-frame GPU cost/memory drops ~2.25x.
+     Native <img srcset> selection uses the real device DPR and is unaffected. */
+  (function capMobileDpr() {
+    try {
+      if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
+      if (window.devicePixelRatio > 2) {
+        Object.defineProperty(window, "devicePixelRatio", {
+          get: function () { return 2; },
+          configurable: true
+        });
+      }
+    } catch (e) {}
+  })();
+
+  /* Phones: Framer's SSR pins ~14 hero elements with inline will-change:transform
+     for their one-shot appear animations, holding GPU layers (textures) forever.
+     Release them once the appear animations are done — the layers collapse with
+     zero visual change and the memory comes back. Two passes in case the runtime
+     re-renders after hydration. */
+  (function releaseWillChangeOnMobile() {
+    try {
+      if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
+    } catch (e) { return; }
+    function strip() {
+      try {
+        var els = document.querySelectorAll('[data-framer-root] [style*="will-change"]');
+        for (var i = 0; i < els.length; i++) {
+          if (getComputedStyle(els[i]).willChange === "transform") els[i].style.willChange = "auto";
+        }
+      } catch (e) {}
+    }
+    setTimeout(strip, 4000);
+    setTimeout(strip, 10000);
+  })();
+
   (function slowBackgroundOnMobile() {
     var isMobile = false;
     try { isMobile = window.matchMedia && window.matchMedia("(max-width: 860px)").matches; } catch (e) {}
