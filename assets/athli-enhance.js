@@ -64,6 +64,104 @@
     } catch (e) {}
   })();
 
+  /* Phones: the particle canvas renders under our blur(20px) (see the mobile CSS),
+     which destroys all detail finer than ~30 device px — so any GL backing above
+     1x CSS resolution is wasted, pixel-identical work. Clamp the backing store the
+     effect allocates (it sizes canvas.width/height from devicePixelRatio): ~4x less
+     shader fill + framebuffer memory EVERY frame vs the DPR-2 cap alone, with the
+     particles themselves completely untouched. Scoped strictly to canvases inside
+     the "Gradient Blur" wrapper; anything else keeps its requested resolution. */
+  (function capParticleCanvasBacking() {
+    try {
+      if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
+      var dW = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, "width");
+      var dH = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, "height");
+      if (!dW || !dH || !dW.set || !dH.set || !dW.get || !dH.get) return;
+      function clampFor(c, v, horiz) {
+        try {
+          if (!c.isConnected || !c.closest('[data-framer-name="Gradient Blur"]')) return v;
+          var css = horiz ? c.clientWidth : c.clientHeight;
+          return (css > 0 && v > css) ? css : v;
+        } catch (e) { return v; }
+      }
+      Object.defineProperty(HTMLCanvasElement.prototype, "width", {
+        get: dW.get,
+        set: function (v) { dW.set.call(this, clampFor(this, v, true)); },
+        configurable: true
+      });
+      Object.defineProperty(HTMLCanvasElement.prototype, "height", {
+        get: dH.get,
+        set: function (v) { dH.set.call(this, clampFor(this, v, false)); },
+        configurable: true
+      });
+    } catch (e) {}
+  })();
+
+  /* Phones: cap responsive-image density at 2x — the likely OOM driver.
+     The six product screenshots carry srcset candidates up to 2048-3920w with a
+     phone slot of ~386 CSS px; a 3x phone computes 386x3=1158px and so picks the
+     2048w candidate: ~13 MB of decoded RGBA PER IMAGE, ~80 MB total, all decoded
+     mid-scroll as the browser's lazy-load lookahead reaches them (right around
+     the stats section — the reported crash site). 2x density is the standard
+     imperceptibility bar for photos; per image we keep the smallest candidate
+     covering 2x of its actual slot and drop only the larger ones. Runs before
+     lazy images load; a cheap observer re-caps anything Framer re-renders. */
+  (function capImageDensityOnPhone() {
+    try {
+      if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
+    } catch (e) { return; }
+    function slotPx(img) {
+      // Evaluate the img's sizes attribute: first matching media condition wins.
+      var sizes = img.getAttribute("sizes") || "";
+      var parts = sizes.split(",");
+      for (var i = 0; i < parts.length; i++) {
+        var p = parts[i].trim();
+        var m = p.match(/^\((.+)\)\s+(.+)$/);
+        var cond = m ? "(" + m[1] + ")" : null;
+        var len = m ? m[2] : p;
+        if (cond) { try { if (!window.matchMedia(cond).matches) continue; } catch (e) { continue; } }
+        var px = len.match(/^([\d.]+)px$/);
+        if (px) return parseFloat(px[1]);
+        var vw = len.match(/^([\d.]+)vw$/);
+        if (vw) return (parseFloat(vw[1]) / 100) * window.innerWidth;
+        return window.innerWidth;       // calc()/unknown: assume full viewport (conservative)
+      }
+      return window.innerWidth;
+    }
+    function cap(img) {
+      var ss = img.getAttribute("srcset");
+      if (!ss || img.getAttribute("data-ath-capped") === ss) return;
+      var cands = [];
+      ss.split(",").forEach(function (c) {
+        var m = c.trim().match(/^(\S+)\s+([\d.]+)w$/);
+        if (m) cands.push({ url: m[1], w: parseFloat(m[2]), raw: c.trim() });
+      });
+      if (cands.length < 2) return;                       // nothing to prune / x-descriptors
+      var target = slotPx(img) * 2;                       // 2x density cap
+      cands.sort(function (a, b) { return a.w - b.w; });
+      var kept = [], covered = false;
+      for (var i = 0; i < cands.length; i++) {
+        if (!covered) { kept.push(cands[i]); if (cands[i].w >= target) covered = true; }
+      }
+      if (kept.length === cands.length) { img.setAttribute("data-ath-capped", ss); return; }
+      var next = kept.map(function (c) { return c.raw; }).join(", ");
+      img.setAttribute("srcset", next);
+      img.setAttribute("data-ath-capped", next);
+    }
+    function sweep() {
+      var imgs = document.querySelectorAll("img[srcset]");
+      for (var i = 0; i < imgs.length; i++) cap(imgs[i]);
+    }
+    sweep();
+    try {
+      var pending = false;
+      new MutationObserver(function () {
+        if (pending) return; pending = true;
+        requestAnimationFrame(function () { pending = false; sweep(); });
+      }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["srcset"] });
+    } catch (e) {}
+  })();
+
   /* Phones: Framer's SSR pins ~14 hero elements with inline will-change:transform
      for their one-shot appear animations, holding GPU layers (textures) forever.
      Release them once the appear animations are done — the layers collapse with
@@ -708,6 +806,20 @@
         [track, progressiveBlur("left", 8, 0.7), progressiveBlur("right", 8, 0.7)]);
       var sec = el("div", { class: "ath-logos", "aria-label": "Featured logos" }, [vp]);
       hero.parentNode.insertBefore(sec, hero.nextSibling);
+      pauseWhenOffscreen(sec);
+    }
+    /* Phones: without this, the marquee's compositor animation keeps running
+       while far offscreen — including exactly while the user scrolls the heavy
+       stats section one viewport below it. Pausing offscreen is invisible: a
+       uniform loop resumes identically when it scrolls back in. */
+    function pauseWhenOffscreen(sec) {
+      try {
+        if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
+        var io = new IntersectionObserver(function (es) {
+          for (var i = 0; i < es.length; i++) sec.classList.toggle("is-off", !es[i].isIntersecting);
+        }, { rootMargin: "80px 0px 80px 0px" });
+        io.observe(sec);
+      } catch (e) {}
     }
     var pending = false;
     build();
@@ -1138,6 +1250,13 @@
      content (licensed stock + neutral avatars — NOT real LinkedIn photos);
      swap for real testimonials, traction numbers and team when available. */
   function buildBelowWaitlist() {
+    /* PRODUCTION (main): the testimonials + traction strip is hidden by CSS
+       (.ath-below { display:none !important } — keep this flag in sync with it).
+       Don't build what can't be seen: previously we still injected the section's
+       DOM, its 6 remote <img> tags, 2 document-level listeners and several
+       IntersectionObservers behind the display:none. The website-preview branch
+       sets this to false and gets the full section back. */
+    var BELOW_HIDDEN = true;
     function topLevelOf(node) {
       var root = document.querySelector("[data-framer-root]");
       if (!root) return null;
@@ -1438,8 +1557,10 @@
       var tm = cl(card, ".ath-tm"); if (!tm) return;
       tmSetActive(tm, parseInt(card.getAttribute("data-i"), 10) || 0);
     }
-    document.addEventListener("mouseover", tmFromEvent);   // hover a photo -> highlight + its quote
-    document.addEventListener("click", tmFromEvent);       // tap support (touch / no hover)
+    if (!BELOW_HIDDEN) {
+      document.addEventListener("mouseover", tmFromEvent);   // hover a photo -> highlight + its quote
+      document.addEventListener("click", tmFromEvent);       // tap support (touch / no hover)
+    }
 
     function countAll(block) { var ns = block.querySelectorAll(".ath-num"); for (var j = 0; j < ns.length; j++) runCount(ns[j]); }
     function finalAll(block) { var ns = block.querySelectorAll(".ath-num"); for (var j = 0; j < ns.length; j++) setFinal(ns[j]); }
@@ -1470,7 +1591,7 @@
     function build() {
       // Testimonials + traction strip: directly UNDER the 3-steps section, i.e.
       // right before the "Why clinics switch" stats card.
-      if (!document.querySelector(".ath-below")) {
+      if (!BELOW_HIDDEN && !document.querySelector(".ath-below")) {
         var stats = document.querySelector(".ath-stats");
         if (stats && stats.parentNode) {
           var sec = el("section", { class: "ath-below", "aria-label": "What clinicians say and traction" });

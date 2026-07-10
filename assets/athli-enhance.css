@@ -638,6 +638,7 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   animation: ath-marquee 40s linear infinite;
 }
 .ath-logos:hover .ath-logos__track { animation-play-state: paused; }
+.ath-logos.is-off .ath-logos__track { animation-play-state: paused; }  /* offscreen (phone JS): compositor idle */
 .ath-logos__group {
   display: flex;
   align-items: center;
