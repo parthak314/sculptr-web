@@ -1158,6 +1158,14 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
    the code, just hidden via CSS). The website-preview branch keeps them. */
 .ath-below { display: none !important; }
 
+/* #experience and #case-study are removed by JS on every breakpoint (see
+   buildHeroShot / removeCaseStudy) — but the JS only runs after parse, and
+   Framer re-renders can flash them back before the observers re-hide them.
+   Pin them off in CSS: same end state, guaranteed from first paint. This also
+   permanently silences the ~90 infinite "shine" mask animations and ~60
+   blurred Glow chips that ship inside #experience in the SSR HTML. */
+#experience, #case-study { display: none !important; }
+
 /* =============================================================================
    MOBILE OPTIMISATION  (layout order + GPU/perf)
    ========================================================================== */

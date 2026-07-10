@@ -45,55 +45,29 @@
   var RAF0 = window.requestAnimationFrame
     ? window.requestAnimationFrame.bind(window)
     : function (f) { return setTimeout(function () { f(Date.now()); }, 16); };
-  /* Phones: cap the pixel ratio the Framer runtime sees at 2 (some phones are 3x).
-     The background particle canvas sizes its GL framebuffer from this, and it is a
-     position:fixed layer that re-renders through a live blur() on EVERY frame of
-     the whole scroll — at 3x that pipeline pushes low-RAM phones over the edge
-     (tab crash mid-scroll). At 2x, behind the blur + reduced opacity, the
-     difference is imperceptible; the per-frame GPU cost/memory drops ~2.25x.
-     Native <img srcset> selection uses the real device DPR and is unaffected. */
+  /* Phones: cap the pixel ratio the JS runtime sees at 1. Decompiling every
+     chunk the page loads confirmed the ONLY real consumer is the tsParticles
+     background (detectRetina -> this.pixelRatio = devicePixelRatio; it scales
+     BOTH the canvas backing and its draw coordinates from this one value, so
+     the cap keeps them consistent). The canvas is a position:fixed layer that
+     re-renders through our blur(20px) on every frame of the whole scroll — the
+     blur destroys all detail finer than ~30 device px, so backing above 1x CSS
+     resolution is provably invisible work: 4-9x less shader fill + framebuffer
+     memory per frame. Native <img srcset> selection uses the browser-internal
+     DPR and is unaffected (verified). If a real-device A/B ever shows a
+     difference, raise this to 1.5 before touching anything else.
+     NB (re-export checklist): re-verify motion.*.mjs still reads
+     performance.now() in its frameloop and that Particles.*.mjs is still the
+     only devicePixelRatio consumer. */
   (function capMobileDpr() {
     try {
       if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
-      if (window.devicePixelRatio > 2) {
+      if (window.devicePixelRatio > 1) {
         Object.defineProperty(window, "devicePixelRatio", {
-          get: function () { return 2; },
+          get: function () { return 1; },
           configurable: true
         });
       }
-    } catch (e) {}
-  })();
-
-  /* Phones: the particle canvas renders under our blur(20px) (see the mobile CSS),
-     which destroys all detail finer than ~30 device px — so any GL backing above
-     1x CSS resolution is wasted, pixel-identical work. Clamp the backing store the
-     effect allocates (it sizes canvas.width/height from devicePixelRatio): ~4x less
-     shader fill + framebuffer memory EVERY frame vs the DPR-2 cap alone, with the
-     particles themselves completely untouched. Scoped strictly to canvases inside
-     the "Gradient Blur" wrapper; anything else keeps its requested resolution. */
-  (function capParticleCanvasBacking() {
-    try {
-      if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
-      var dW = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, "width");
-      var dH = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, "height");
-      if (!dW || !dH || !dW.set || !dH.set || !dW.get || !dH.get) return;
-      function clampFor(c, v, horiz) {
-        try {
-          if (!c.isConnected || !c.closest('[data-framer-name="Gradient Blur"]')) return v;
-          var css = horiz ? c.clientWidth : c.clientHeight;
-          return (css > 0 && v > css) ? css : v;
-        } catch (e) { return v; }
-      }
-      Object.defineProperty(HTMLCanvasElement.prototype, "width", {
-        get: dW.get,
-        set: function (v) { dW.set.call(this, clampFor(this, v, true)); },
-        configurable: true
-      });
-      Object.defineProperty(HTMLCanvasElement.prototype, "height", {
-        get: dH.get,
-        set: function (v) { dH.set.call(this, clampFor(this, v, false)); },
-        configurable: true
-      });
     } catch (e) {}
   })();
 
@@ -187,13 +161,24 @@
     var isMobile = false;
     try { isMobile = window.matchMedia && window.matchMedia("(max-width: 860px)").matches; } catch (e) {}
     if (!isMobile || !window.requestAnimationFrame) return;
-    var SLOW_FACTOR = 0.55, base = null, active = false;
+    /* Verified against the deployed bundles: framer-motion's frameloop reads
+       performance.now() and ignores this timestamp entirely; the only scaled-
+       clock consumer is the tsParticles background, whose time handling is
+       self-consistent (and whose fpsLimit gate means this scaler also halves
+       its paint rate — removing it would RAISE GPU load). The clock below is
+       continuous (base = first post-activation timestamp) and kept strictly
+       monotonic as belt-and-braces. Re-export checklist: re-verify the motion
+       chunk still uses performance.now() before keeping this. */
+    var SLOW_FACTOR = 0.55, base = null, active = false, last = 0;
     setTimeout(function () { active = true; }, 1800);
     window.requestAnimationFrame = function (cb) {
       return RAF0(function (t) {
-        if (!active) return cb(t);
-        if (base === null) base = t;
-        cb(base + (t - base) * SLOW_FACTOR);
+        var out;
+        if (!active) { out = t; }
+        else { if (base === null) base = t; out = base + (t - base) * SLOW_FACTOR; }
+        if (out <= last) out = last + 0.1;
+        last = out;
+        cb(out);
       });
     };
   })();
@@ -351,10 +336,18 @@
         var y = window.scrollY || document.documentElement.scrollTop;
         var scrolled = y > 50;
         nav.classList.toggle("is-scrolled", scrolled);
-        if (ctaText) ctaText.textContent = scrolled ? CONFIG.ctaLabelScrolled : CONFIG.ctaLabel;
-
+        /* Only write when the label actually changes. An unconditional
+           textContent assignment replaces the text node — a DOM mutation on
+           EVERY scroll frame that woke every body-wide MutationObserver on the
+           page (each running document-wide sweeps), all to re-write the same
+           string. */
+        if (ctaText) {
+          var want = scrolled ? CONFIG.ctaLabelScrolled : CONFIG.ctaLabel;
+          if (ctaText.textContent !== want) ctaText.textContent = want;
+        }
         var docH = document.documentElement.scrollHeight - window.innerHeight;
-        bar.style.width = (docH > 0 ? (y / docH) * 100 : 0) + "%";
+        var p = docH > 0 ? Math.round((y / docH) * 1000) / 10 : 0;   // 0.1% steps
+        if (bar.__p !== p) { bar.__p = p; bar.style.width = p + "%"; }
         toTop.classList.toggle("is-visible", y > 400);
         ticking = false;
       });
@@ -633,7 +626,16 @@
       remeasure();
       cycle(slot, state);
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(remeasure);
-      var rt; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(remeasure, 200); });
+      /* Width-change only: on phones the URL bar showing/hiding fires resize on
+         every scroll direction change, and each remeasure is ~20 probe
+         measurements with forced reflows. Height-only resizes can't change the
+         fitted width, so skip them. */
+      var rt, lastW = window.innerWidth;
+      window.addEventListener("resize", function () {
+        if (window.innerWidth === lastW) return;
+        lastW = window.innerWidth;
+        clearTimeout(rt); rt = setTimeout(remeasure, 200);
+      });
     }
 
     // findSubtext only matches the original Framer copy ("AI-powered visual tool"),
