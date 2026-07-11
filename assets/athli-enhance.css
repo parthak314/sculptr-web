@@ -1322,4 +1322,17 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
      the field reads sparser and calmer behind the content. Tune the opacity (or
      remove) to taste. */
   #main [data-framer-name="Gradient Blur"] canvas { opacity: 0.45 !important; }
+
+  /* --- Nav logo: smaller on phones (200x44 was ~half the screen wide). Same
+     aspect ratio so the wordmark crop is identical, just scaled down. --- */
+  .ath-nav__logo img { width: 150px; height: 33px; }
+
+  /* --- Hero: raise it up and tighten the vertical rhythm. The hero content
+     column (framer-wqgg98) had padding-top:41px and a 90px gap between its
+     stacked blocks — that gap is what left both a low hero start and a big
+     space between the "…set you apart." tagline and the Request Access button.
+     Framer-hashed classes: re-check these two hashes if the site is re-exported
+     from Framer. --- */
+  #main .framer-wqgg98 { padding-top: 14px !important; gap: 40px !important; row-gap: 40px !important; }
+  #main .framer-1dci305 { padding-top: 22px !important; padding-bottom: 22px !important; }
 }
