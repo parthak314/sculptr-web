@@ -20,7 +20,7 @@
     ],
     ctaLabel: "Launch App",                 // CTA (stays the same when scrolled)
     ctaLabelScrolled: "Launch App",
-    ctaHref: "https://sculptr.vercel.app",
+    ctaHref: "https://app.sculptrlabs.com",
     footerLinks: [
       { label: "How it works", href: "#", scroll: ".ath-how-head" },
       { label: "FAQ", href: "#faq", scroll: "#faq" },
