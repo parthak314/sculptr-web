@@ -16,8 +16,47 @@ body {
   background: #ffffff;
 }
 
+/* --------------------------- ambient blue mist ---------------------------- */
+/* Replica of the homepage's animated "particles" backdrop: a soft light-blue
+   haze that breathes around a white centre (sampled from the live hero canvas,
+   avg rgb(227,239,249)). Pure CSS — big blurred radial blobs drifting slowly —
+   so the standalone page needs no WebGL. Static on phones + reduced motion. */
+.ath-req-bg {
+  position: fixed; inset: 0; z-index: 0;
+  overflow: hidden; pointer-events: none;
+}
+.ath-req-bg__blob {
+  position: absolute; border-radius: 50%;
+  filter: blur(64px); will-change: transform;
+}
+.ath-req-bg__blob--a {           /* upper-left flank */
+  width: 56vw; height: 52vh; left: -14vw; top: 2vh;
+  background: radial-gradient(closest-side, rgba(176, 209, 243, 0.62), rgba(176, 209, 243, 0) 72%);
+  animation: ath-mist-a 27s ease-in-out infinite alternate;
+}
+.ath-req-bg__blob--b {           /* right flank */
+  width: 52vw; height: 62vh; right: -16vw; top: 16vh;
+  background: radial-gradient(closest-side, rgba(186, 216, 246, 0.58), rgba(186, 216, 246, 0) 74%);
+  animation: ath-mist-b 33s ease-in-out infinite alternate;
+}
+.ath-req-bg__blob--c {           /* lower centre wash */
+  width: 74vw; height: 48vh; left: 13vw; bottom: -18vh;
+  background: radial-gradient(closest-side, rgba(197, 223, 248, 0.55), rgba(197, 223, 248, 0) 76%);
+  animation: ath-mist-c 24s ease-in-out infinite alternate;
+}
+.ath-req-bg__blob--d {           /* faint top-centre breath */
+  width: 40vw; height: 30vh; left: 32vw; top: -12vh;
+  background: radial-gradient(closest-side, rgba(208, 229, 249, 0.5), rgba(208, 229, 249, 0) 78%);
+  animation: ath-mist-d 30s ease-in-out infinite alternate;
+}
+@keyframes ath-mist-a { from { transform: translate(0, 0) scale(1); } to { transform: translate(6vw, 5vh) scale(1.12); } }
+@keyframes ath-mist-b { from { transform: translate(0, 0) scale(1.08); } to { transform: translate(-5vw, -6vh) scale(0.94); } }
+@keyframes ath-mist-c { from { transform: translate(0, 0) scale(1); } to { transform: translate(-7vw, -3vh) scale(1.15); } }
+@keyframes ath-mist-d { from { transform: translate(0, 0) scale(1); } to { transform: translate(4vw, 4vh) scale(1.18); } }
+
 /* ------------------------------- layout ---------------------------------- */
 .ath-req {
+  position: relative; z-index: 1;          /* content rides above the mist */
   max-width: 720px;
   margin: 0 auto;
   padding: clamp(120px, 16vh, 168px) 24px clamp(72px, 10vh, 120px);
@@ -287,8 +326,15 @@ body {
   .ath-req__actions .glass-button { width: 100%; justify-content: center; }
 }
 
+/* Phones: keep the mist but stop animating it (same ethos as the homepage's
+   mobile perf work — no continuously-painting layers on small GPUs). */
+@media (max-width: 860px) {
+  .ath-req-bg__blob { animation: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ath-req__head, .ath-req__card, .ath-req__success:not([hidden]) { animation: none; }
   .ath-req__check-ring, .ath-req__check-tick { animation: none; stroke-dashoffset: 0; }
   .ath-req__card.is-leaving { transition: none; }
+  .ath-req-bg__blob { animation: none; }
 }
