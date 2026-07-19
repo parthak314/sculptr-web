@@ -231,6 +231,10 @@ body {
 .ath-req__actions {
   margin-top: 26px;
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  /* The page inherits the Framer export's smaller base font-size and the glass
+     button is em-sized — pin the 16px "component default" (same trick as
+     .ath-hero-badge) so the CTA renders at its original size. */
+  font-size: 16px;
 }
 /* Same treatment as the nav CTA (`.ath-nav-cta .glass-button`): an inline
    anchor won't paint its background behind its block text child. */
