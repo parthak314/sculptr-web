@@ -1642,7 +1642,7 @@
   });
   window.athNavigateWithFade = navigateWithFade;
 
-  /* --------------- Request Access buttons → /request-access/ -------------- */
+  /* --------------- Request Access buttons → /request-access --------------- */
   /* The Framer buttons link to "./" (nowhere). Point every one of them at the
      request page, with the veil fade. Capture phase beats Framer's own link
      handler; the MutationObserver survives Framer re-renders. */
@@ -1655,10 +1655,10 @@
         var a = ps[i].closest ? ps[i].closest("a") : null;
         if (!a || a.getAttribute("data-ath-req") === "1") continue;
         a.setAttribute("data-ath-req", "1");
-        a.setAttribute("href", "/request-access/");
+        a.setAttribute("href", "/request-access");
         a.addEventListener("click", function (e) {
           e.preventDefault(); e.stopPropagation();
-          navigateWithFade("/request-access/");
+          navigateWithFade("/request-access");
         }, true);
       }
     }
@@ -1672,10 +1672,11 @@
 
   /* ----------------------------- init ------------------------------------- */
   function init() {
-    /* Standalone pages (e.g. /request-access/) reuse this behaviour layer for
+    /* Standalone pages (e.g. /request-access) reuse this behaviour layer for
        the site chrome only: same nav + scroll behaviour, nothing Framer. Links
        point back to the homepage sections. */
     if (document.body && document.body.getAttribute("data-ath-page") === "request") {
+      killFramerEditBar();
       CONFIG.homeHref = "/";
       CONFIG.navLinks = [
         { label: "How it works", href: "/#how" },
