@@ -6,7 +6,9 @@
 <title>Request Access — Sculptr</title>
 <meta name="description" content="Tell us about your clinic and get access to Sculptr — 3D treatment visualization for aesthetic clinicians.">
 <meta name="robots" content="noindex">
-<link rel="icon" href="https://framerusercontent.com/images/2s5IeQ3VOaEwTjCOKM1C7rUbF2Q.png">
+<link href="https://framerusercontent.com/images/QKQsCN3hMZdbvaiS7Iv2MDXjrs.png" rel="icon" media="(prefers-color-scheme: light)">
+<link href="https://framerusercontent.com/images/QKQsCN3hMZdbvaiS7Iv2MDXjrs.png" rel="icon" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="https://framerusercontent.com/images/QKQsCN3hMZdbvaiS7Iv2MDXjrs.png">
 <style>
 @font-face { font-family: "Satoshi"; src: url("https://framerusercontent.com/third-party-assets/fontshare/wf/TTX2Z3BF3P6Y5BQT3IV2VNOK6FL22KUT/7QYRJOI3JIMYHGY6CH7SOIFRQLZOLNJ6/KFIAZD4RUMEZIYV6FQ3T3GP5PDBDB6JY.woff2"); font-display: swap; font-style: normal; font-weight: 400 }
 @font-face { font-family: "Satoshi"; src: url("https://framerusercontent.com/third-party-assets/fontshare/wf/LAFFD4SDUCDVQEXFPDC7C53EQ4ZELWQI/PXCT3G6LO6ICM5I3NTYENYPWJAECAWDD/GHM6WVH6MILNYOOCXHXB5GTSGNTMGXZR.woff2"); font-display: swap; font-style: normal; font-weight: 700 }
@@ -44,15 +46,19 @@
         <p class="ath-field__error" data-error-for="f-name"></p>
       </div>
       <div class="ath-field">
-        <label class="ath-field__label" for="f-role">Your role</label>
-        <div class="ath-select-wrap">
-          <select class="ath-field__input ath-field__select" id="f-role" name="role">
-            <option value="" selected>Select&hellip;</option>
-            <option value="owner">Clinic owner</option>
-            <option value="clinician">Aesthetic clinician</option>
-            <option value="practice_manager">Practice manager</option>
-            <option value="other">Other</option>
-          </select>
+        <label class="ath-field__label" id="f-role-label">Your role <span class="ath-field__opt">optional</span></label>
+        <div class="ath-dd" data-dd="role">
+          <button type="button" class="ath-dd__trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="f-role-label">
+            <span class="ath-dd__value is-placeholder" data-placeholder="Select&hellip;">Select&hellip;</span>
+            <svg class="ath-dd__chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <input type="hidden" id="f-role" name="role" value="">
+          <ul class="ath-dd__panel" role="listbox" aria-label="Your role">
+            <li class="ath-dd__opt" data-value="owner">Clinic owner</li>
+            <li class="ath-dd__opt" data-value="clinician">Aesthetic clinician</li>
+            <li class="ath-dd__opt" data-value="practice_manager">Practice manager</li>
+            <li class="ath-dd__opt" data-value="other">Other</li>
+          </ul>
         </div>
       </div>
       <div class="ath-field">
@@ -66,22 +72,32 @@
         <input class="ath-field__input" id="f-phone" name="phone" type="tel" autocomplete="tel" placeholder="+44 20 0000 0000">
       </div>
       <div class="ath-field">
-        <label class="ath-field__label" for="f-website">Clinic website or Instagram <span class="ath-field__opt">optional</span></label>
-        <input class="ath-field__input" id="f-website" name="website" type="text" autocomplete="url" placeholder="clinic.com or @yourclinic">
+        <label class="ath-field__label" for="f-instagram">Instagram <span class="ath-field__req">*</span></label>
+        <input class="ath-field__input" id="f-instagram" name="website" type="text" autocomplete="off" placeholder="@yourclinic">
+        <label class="ath-check">
+          <input type="checkbox" id="f-noig" class="ath-check__box">
+          <span class="ath-check__mark" aria-hidden="true"></span>
+          <span class="ath-check__label">We don&rsquo;t have an Instagram page</span>
+        </label>
+        <p class="ath-field__error" data-error-for="f-instagram"></p>
       </div>
       <div class="ath-field ath-field--full">
-        <label class="ath-field__label" for="f-heard">How did you find out about us? <span class="ath-field__req">*</span></label>
-        <div class="ath-select-wrap">
-          <select class="ath-field__input ath-field__select" id="f-heard" name="heardFrom" required>
-            <option value="" selected>Select&hellip;</option>
-            <option value="google">Google search</option>
-            <option value="instagram">Instagram</option>
-            <option value="linkedin">LinkedIn</option>
-            <option value="colleague">Colleague or friend</option>
-            <option value="conference">Conference / event</option>
-            <option value="press">Press / article</option>
-            <option value="other">Other</option>
-          </select>
+        <label class="ath-field__label" id="f-heard-label">How did you find out about us? <span class="ath-field__req">*</span></label>
+        <div class="ath-dd" data-dd="heard">
+          <button type="button" class="ath-dd__trigger" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="f-heard-label">
+            <span class="ath-dd__value is-placeholder" data-placeholder="Select&hellip;">Select&hellip;</span>
+            <svg class="ath-dd__chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <input type="hidden" id="f-heard" name="heardFrom" value="">
+          <ul class="ath-dd__panel" role="listbox" aria-label="How did you find out about us?">
+            <li class="ath-dd__opt" data-value="google">Google search</li>
+            <li class="ath-dd__opt" data-value="instagram">Instagram</li>
+            <li class="ath-dd__opt" data-value="linkedin">LinkedIn</li>
+            <li class="ath-dd__opt" data-value="colleague">Colleague or friend</li>
+            <li class="ath-dd__opt" data-value="conference">Conference / event</li>
+            <li class="ath-dd__opt" data-value="press">Press / article</li>
+            <li class="ath-dd__opt" data-value="other">Other</li>
+          </ul>
         </div>
         <p class="ath-field__error" data-error-for="f-heard"></p>
       </div>

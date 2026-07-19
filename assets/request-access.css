@@ -5,17 +5,15 @@
    card, pill inputs like the app's sign-in.
    ========================================================================== */
 
+/* Plain white — identical to the homepage's backdrop (its Framer particle
+   canvas is effectively invisible, so white is the true match). */
 html, body { margin: 0; padding: 0; background: #ffffff; }
 body {
   font-family: "Satoshi", "Satoshi Placeholder", sans-serif;
   color: rgb(15, 57, 139);
   -webkit-font-smoothing: antialiased;
   min-height: 100svh;
-  /* faint brand glow, echoing the homepage's airy white + blue accents */
-  background:
-    radial-gradient(58% 34% at 50% -6%, rgba(21, 96, 189, 0.10), rgba(21, 96, 189, 0) 70%),
-    radial-gradient(40% 28% at 88% 12%, rgba(58, 147, 242, 0.06), rgba(58, 147, 242, 0) 70%),
-    #ffffff;
+  background: #ffffff;
 }
 
 /* ------------------------------- layout ---------------------------------- */
@@ -96,29 +94,99 @@ body {
   background: #ffffff;
   box-shadow: 0 0 0 4px rgba(21, 96, 189, 0.13);
 }
-.ath-field__input[aria-invalid="true"] {
+.ath-field__input[aria-invalid="true"],
+.ath-field__input.is-invalid,
+.ath-dd.is-invalid .ath-dd__trigger {
   border-color: rgba(211, 61, 67, 0.65);
   box-shadow: 0 0 0 4px rgba(211, 61, 67, 0.10);
+}
+.ath-field__input:disabled {
+  opacity: 0.5; cursor: not-allowed;
+  background: rgba(15, 57, 139, 0.04);
 }
 .ath-field__textarea {
   height: auto; min-height: 96px; padding: 13px 18px;
   border-radius: 20px; resize: vertical; line-height: 1.5;
 }
-/* selects: same pill, custom chevron */
-.ath-select-wrap { position: relative; }
-.ath-select-wrap::after {
-  content: ""; position: absolute; right: 18px; top: 50%;
-  width: 9px; height: 9px; pointer-events: none;
-  transform: translateY(-70%) rotate(45deg);
-  border-right: 2px solid rgba(15, 57, 139, 0.45);
-  border-bottom: 2px solid rgba(15, 57, 139, 0.45);
-  border-radius: 1px;
+
+/* -------- custom on-brand dropdown (replaces native <select>) ------------- */
+.ath-dd { position: relative; }
+.ath-dd__trigger {
+  width: 100%; box-sizing: border-box;
+  height: 46px; padding: 0 15px 0 18px;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 57, 139, 0.16);
+  background: rgba(255, 255, 255, 0.85);
+  font-family: inherit; font-size: 15px; font-weight: 500; color: rgb(15, 57, 139);
+  text-align: left; cursor: pointer; outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
 }
-.ath-field__select {
-  appearance: none; -webkit-appearance: none;
-  padding-right: 44px; cursor: pointer;
+.ath-dd__trigger:hover { border-color: rgba(15, 57, 139, 0.28); }
+.ath-dd.is-open .ath-dd__trigger,
+.ath-dd__trigger:focus-visible {
+  border-color: rgb(21, 96, 189); background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(21, 96, 189, 0.13);
 }
-.ath-field__select:invalid, .ath-field__select option[value=""] { color: rgba(15, 57, 139, 0.38); }
+.ath-dd__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ath-dd__value.is-placeholder { color: rgba(15, 57, 139, 0.38); }
+.ath-dd__chev {
+  width: 13px; height: 13px; flex-shrink: 0; color: rgba(15, 57, 139, 0.5);
+  transition: transform .28s cubic-bezier(0.22, 1, 0.36, 1), color .18s ease;
+}
+.ath-dd.is-open .ath-dd__chev { transform: rotate(180deg); color: rgb(21, 96, 189); }
+.ath-dd__panel {
+  list-style: none; margin: 0; padding: 6px;
+  position: absolute; left: 0; right: 0; top: calc(100% + 8px); z-index: 40;
+  background: #ffffff;
+  border: 1px solid rgba(15, 57, 139, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 22px 46px -20px rgba(15, 57, 139, 0.45), 0 6px 16px -8px rgba(15, 57, 139, 0.22);
+  max-height: 264px; overflow-y: auto;
+  opacity: 0; transform: translateY(-6px) scale(0.98); transform-origin: top center;
+  pointer-events: none;
+  transition: opacity .18s ease, transform .22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ath-dd.is-open .ath-dd__panel { opacity: 1; transform: none; pointer-events: auto; }
+.ath-dd__opt {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 14px; border-radius: 12px;
+  font-size: 14.5px; font-weight: 600; color: rgba(15, 57, 139, 0.8);
+  cursor: pointer; outline: none;
+  transition: background .14s ease, color .14s ease;
+}
+.ath-dd__opt:hover, .ath-dd__opt:focus-visible {
+  background: rgba(21, 96, 189, 0.08); color: rgb(21, 96, 189);
+}
+.ath-dd__opt.is-selected { background: rgba(21, 96, 189, 0.10); color: rgb(21, 96, 189); font-weight: 700; }
+.ath-dd__opt.is-selected::after {
+  content: ""; width: 5px; height: 9px; margin-right: 2px;
+  border: solid rgb(21, 96, 189); border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* -------- custom checkbox (Instagram opt-out) ----------------------------- */
+.ath-check {
+  display: inline-flex; align-items: center; gap: 9px;
+  margin: 11px 0 0 3px; cursor: pointer; user-select: none;
+}
+.ath-check__box { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.ath-check__mark {
+  width: 19px; height: 19px; flex-shrink: 0; border-radius: 6px;
+  border: 1.5px solid rgba(15, 57, 139, 0.3); background: rgba(255, 255, 255, 0.7);
+  display: grid; place-items: center;
+  transition: background .16s ease, border-color .16s ease;
+}
+.ath-check__mark::after {
+  content: ""; width: 5px; height: 9px; margin-top: -1px;
+  border: solid #ffffff; border-width: 0 2px 2px 0;
+  transform: rotate(45deg) scale(0.5); opacity: 0;
+  transition: opacity .16s ease, transform .16s ease;
+}
+.ath-check__box:checked + .ath-check__mark { background: rgb(21, 96, 189); border-color: rgb(21, 96, 189); }
+.ath-check__box:checked + .ath-check__mark::after { opacity: 1; transform: rotate(45deg) scale(1); }
+.ath-check__box:focus-visible + .ath-check__mark { box-shadow: 0 0 0 4px rgba(21, 96, 189, 0.18); }
+.ath-check__label { font-size: 12.5px; font-weight: 600; color: rgba(15, 57, 139, 0.6); }
 .ath-field__hint {
   margin: 7px 0 0 14px;
   font-size: 11.5px; font-weight: 600; color: rgba(58, 147, 242, 0.85);
@@ -194,7 +262,12 @@ body {
   color: rgba(15, 57, 139, 0.62);
 }
 .ath-req__success-copy strong { color: rgb(15, 57, 139); font-weight: 700; }
-.ath-req__actions--success { justify-content: center; margin-top: 30px; }
+/* Success: stack so the countdown sits directly UNDER the Continue button. */
+.ath-req__actions--success {
+  flex-direction: column; justify-content: center; align-items: center;
+  gap: 13px; margin-top: 30px;
+}
+.ath-req__actions--success .ath-req__actions-note { text-align: center; }
 
 /* ------------------------------- entrance --------------------------------- */
 /* Staggered rise on load — the receiving half of the veil page transition. */

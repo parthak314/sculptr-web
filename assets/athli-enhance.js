@@ -1685,6 +1685,21 @@
       var rBuilt = buildNav();
       var rExtras = buildScrollExtras();
       wireScroll(rBuilt.nav, rBuilt.ctaText, rExtras.bar, rExtras.toTop);
+      // Fade back to the homepage (logo + nav links + mobile panel) with the
+      // same white veil used on the way in — only site-internal links ("/…"),
+      // the external "Launch App" CTA navigates normally.
+      var navAnchors = document.querySelectorAll(".ath-nav a, .ath-mobile-panel a");
+      for (var ai = 0; ai < navAnchors.length; ai++) {
+        (function (a) {
+          var href = a.getAttribute("href") || "";
+          if (href.charAt(0) !== "/" || a.getAttribute("data-ath-fade") === "1") return;
+          a.setAttribute("data-ath-fade", "1");
+          a.addEventListener("click", function (e) {
+            e.preventDefault(); e.stopPropagation();
+            navigateWithFade(href);
+          }, true);
+        })(navAnchors[ai]);
+      }
       return;
     }
     killFramerEditBar();
