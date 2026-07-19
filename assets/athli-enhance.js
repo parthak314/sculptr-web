@@ -1624,10 +1624,78 @@
     } catch (e) {}
   }
 
+  /* --------------------- page fade (route transitions) -------------------- */
+  /* Smooth white-veil fade used when hopping between pages (home ⇄ request
+     access ⇄ the app). The destination page animates itself back in. */
+  function navigateWithFade(url) {
+    var veil = document.querySelector(".ath-veil");
+    if (!veil) { veil = el("div", { class: "ath-veil", "aria-hidden": "true" }); document.body.appendChild(veil); }
+    void veil.offsetWidth;                       // force reflow so the transition runs
+    veil.classList.add("is-on");
+    setTimeout(function () { window.location.href = url; }, 320);
+  }
+  // bfcache back-navigation restores the old DOM — clear the veil or the page
+  // comes back frozen behind an opaque overlay.
+  window.addEventListener("pageshow", function () {
+    var veil = document.querySelector(".ath-veil");
+    if (veil) veil.classList.remove("is-on");
+  });
+  window.athNavigateWithFade = navigateWithFade;
+
+  /* --------------- Request Access buttons → /request-access/ -------------- */
+  /* The Framer buttons link to "./" (nowhere). Point every one of them at the
+     request page, with the veil fade. Capture phase beats Framer's own link
+     handler; the MutationObserver survives Framer re-renders. */
+  function wireRequestAccess() {
+    function wire() {
+      var ps = document.querySelectorAll("p.framer-text");
+      for (var i = 0; i < ps.length; i++) {
+        var t = (ps[i].textContent || "").trim();
+        if (t !== "Request Access" && t !== "Get Access") continue;
+        var a = ps[i].closest ? ps[i].closest("a") : null;
+        if (!a || a.getAttribute("data-ath-req") === "1") continue;
+        a.setAttribute("data-ath-req", "1");
+        a.setAttribute("href", "/request-access/");
+        a.addEventListener("click", function (e) {
+          e.preventDefault(); e.stopPropagation();
+          navigateWithFade("/request-access/");
+        }, true);
+      }
+    }
+    wire();
+    try {
+      var pending = false;
+      new MutationObserver(function () { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; wire(); }); })
+        .observe(document.body, { childList: true, subtree: true });
+    } catch (e) {}
+  }
+
   /* ----------------------------- init ------------------------------------- */
   function init() {
+    /* Standalone pages (e.g. /request-access/) reuse this behaviour layer for
+       the site chrome only: same nav + scroll behaviour, nothing Framer. Links
+       point back to the homepage sections. */
+    if (document.body && document.body.getAttribute("data-ath-page") === "request") {
+      CONFIG.homeHref = "/";
+      CONFIG.navLinks = [
+        { label: "How it works", href: "/#how" },
+        { label: "FAQ", href: "/#faq" },
+        { label: "Contact", href: "/contact" }
+      ];
+      var rBuilt = buildNav();
+      var rExtras = buildScrollExtras();
+      wireScroll(rBuilt.nav, rBuilt.ctaText, rExtras.bar, rExtras.toTop);
+      return;
+    }
     killFramerEditBar();
     relabelCta();
+    wireRequestAccess();
+    // deep links from the request page's nav (its links can't smooth-scroll
+    // cross-page, so they land here with a hash we resolve once built).
+    if (location.hash === "#how" || location.hash === "#faq") {
+      var target = location.hash === "#how" ? ".ath-how-head" : "#faq";
+      setTimeout(function () { smoothTo(target); }, 650);
+    }
     buildTagline();
     buildHeroShot();
     tweakHeroButtons();

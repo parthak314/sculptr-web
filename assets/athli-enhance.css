@@ -1343,3 +1343,14 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
      Sit it cleanly below the buttons with a small gap instead. --- */
   .ath-heroshot { margin-top: -24px !important; }
 }
+
+/* ---------------------- page-transition veil ------------------------------ */
+/* White overlay faded in before cross-page navigation (home ⇄ request access
+   ⇄ app sign-up); the destination page animates itself back in. */
+.ath-veil {
+  position: fixed; inset: 0; z-index: 4000;
+  background: #ffffff; opacity: 0; pointer-events: none;
+  transition: opacity .32s ease;
+}
+.ath-veil.is-on { opacity: 1; pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) { .ath-veil { transition: none; } }

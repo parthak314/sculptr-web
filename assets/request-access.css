@@ -1,0 +1,221 @@
+/* =============================================================================
+   Request Access page — the only page besides the homepage. Same chrome (nav
+   built by athli-enhance.js), otherwise just this form. Visual language mirrors
+   the homepage: Satoshi, navy/azure palette, gradient display heading, glass
+   card, pill inputs like the app's sign-in.
+   ========================================================================== */
+
+html, body { margin: 0; padding: 0; background: #ffffff; }
+body {
+  font-family: "Satoshi", "Satoshi Placeholder", sans-serif;
+  color: rgb(15, 57, 139);
+  -webkit-font-smoothing: antialiased;
+  min-height: 100svh;
+  /* faint brand glow, echoing the homepage's airy white + blue accents */
+  background:
+    radial-gradient(58% 34% at 50% -6%, rgba(21, 96, 189, 0.10), rgba(21, 96, 189, 0) 70%),
+    radial-gradient(40% 28% at 88% 12%, rgba(58, 147, 242, 0.06), rgba(58, 147, 242, 0) 70%),
+    #ffffff;
+}
+
+/* ------------------------------- layout ---------------------------------- */
+.ath-req {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: clamp(120px, 16vh, 168px) 24px clamp(72px, 10vh, 120px);
+  box-sizing: border-box;
+}
+
+/* ------------------------------- header ---------------------------------- */
+.ath-req__head { text-align: center; margin-bottom: 40px; }
+.ath-req__eyebrow {
+  margin: 0 0 14px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.18em;
+  color: rgb(58, 147, 242);
+}
+.ath-req__title {
+  margin: 0;
+  font-size: clamp(34px, 5.4vw, 52px);
+  font-weight: 700; letter-spacing: -0.03em; line-height: 1.06;
+  background: linear-gradient(161deg, rgb(255, 255, 255) -42%, rgb(21, 96, 189) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.ath-req__sub {
+  margin: 16px auto 0; max-width: 500px;
+  font-size: 16px; font-weight: 500; line-height: 1.55;
+  color: rgba(15, 57, 139, 0.62);
+}
+
+/* ------------------------------- glass card ------------------------------- */
+.ath-req__card {
+  position: relative;
+  border-radius: 26px;
+  padding: clamp(24px, 4vw, 38px);
+  background: linear-gradient(-75deg, rgba(255,255,255,0.55), rgba(255,255,255,0.82) 46%, rgba(255,255,255,0.55));
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  backdrop-filter: blur(14px) saturate(150%);
+  box-shadow:
+    inset 0 0 0 1px rgba(21, 96, 189, 0.10),
+    inset 2px 2px 3px -2px rgba(255, 255, 255, 0.9),
+    0 30px 60px -30px rgba(15, 57, 139, 0.35),
+    0 6px 18px -8px rgba(15, 57, 139, 0.18);
+}
+
+/* ------------------------------- fields ----------------------------------- */
+.ath-req__grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  column-gap: 18px; row-gap: 20px;
+}
+.ath-field--full { grid-column: 1 / -1; }
+.ath-field__label {
+  display: block; margin: 0 0 8px 14px;
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.01em;
+  color: rgba(15, 57, 139, 0.72);
+}
+.ath-field__req { color: rgb(58, 147, 242); }
+.ath-field__opt {
+  font-weight: 600; font-size: 11px; color: rgba(15, 57, 139, 0.38);
+  margin-left: 2px;
+}
+.ath-field__input {
+  width: 100%; box-sizing: border-box;
+  height: 46px; padding: 0 18px;
+  border-radius: 999px;                       /* pill inputs, same as the app's sign-in */
+  border: 1px solid rgba(15, 57, 139, 0.16);
+  background: rgba(255, 255, 255, 0.85);
+  font-family: inherit; font-size: 15px; font-weight: 500;
+  color: rgb(15, 57, 139);
+  outline: none;
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.ath-field__input::placeholder { color: rgba(15, 57, 139, 0.32); font-weight: 500; }
+.ath-field__input:hover { border-color: rgba(15, 57, 139, 0.28); }
+.ath-field__input:focus {
+  border-color: rgb(21, 96, 189);
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(21, 96, 189, 0.13);
+}
+.ath-field__input[aria-invalid="true"] {
+  border-color: rgba(211, 61, 67, 0.65);
+  box-shadow: 0 0 0 4px rgba(211, 61, 67, 0.10);
+}
+.ath-field__textarea {
+  height: auto; min-height: 96px; padding: 13px 18px;
+  border-radius: 20px; resize: vertical; line-height: 1.5;
+}
+/* selects: same pill, custom chevron */
+.ath-select-wrap { position: relative; }
+.ath-select-wrap::after {
+  content: ""; position: absolute; right: 18px; top: 50%;
+  width: 9px; height: 9px; pointer-events: none;
+  transform: translateY(-70%) rotate(45deg);
+  border-right: 2px solid rgba(15, 57, 139, 0.45);
+  border-bottom: 2px solid rgba(15, 57, 139, 0.45);
+  border-radius: 1px;
+}
+.ath-field__select {
+  appearance: none; -webkit-appearance: none;
+  padding-right: 44px; cursor: pointer;
+}
+.ath-field__select:invalid, .ath-field__select option[value=""] { color: rgba(15, 57, 139, 0.38); }
+.ath-field__hint {
+  margin: 7px 0 0 14px;
+  font-size: 11.5px; font-weight: 600; color: rgba(58, 147, 242, 0.85);
+}
+.ath-field__error {
+  margin: 7px 0 0 14px; min-height: 0;
+  font-size: 11.5px; font-weight: 600; color: rgb(197, 52, 58);
+  display: none;
+}
+.ath-field__error.is-on { display: block; }
+
+/* honeypot — off-screen, never display:none (bots skip hidden fields) */
+.ath-hp {
+  position: absolute; left: -9999px; top: auto;
+  width: 1px; height: 1px; overflow: hidden;
+}
+
+/* ------------------------------- actions ---------------------------------- */
+.ath-req__form-error {
+  display: none; margin: 18px 0 0; padding: 12px 18px;
+  border-radius: 16px; font-size: 13px; font-weight: 600;
+  color: rgb(178, 44, 50);
+  background: rgba(211, 61, 67, 0.07);
+  border: 1px solid rgba(211, 61, 67, 0.22);
+}
+.ath-req__form-error.is-on { display: block; }
+.ath-req__actions {
+  margin-top: 26px;
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+}
+/* Same treatment as the nav CTA (`.ath-nav-cta .glass-button`): an inline
+   anchor won't paint its background behind its block text child. */
+.ath-req__actions .glass-button {
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; border: 0; font-family: inherit; text-decoration: none;
+}
+.ath-req__actions-note {
+  margin: 0; font-size: 12.5px; font-weight: 600;
+  color: rgba(15, 57, 139, 0.45);
+}
+.ath-req__submit-wrap.is-busy { opacity: 0.65; pointer-events: none; }
+
+/* ------------------------------- success ---------------------------------- */
+/* The form blurs away (same recipe as the testimonial swap) and this rises in. */
+.ath-req__card.is-leaving {
+  transition: opacity .4s ease, filter .4s ease, transform .4s ease;
+  opacity: 0; filter: blur(5px); transform: scale(0.985);
+  pointer-events: none;
+}
+.ath-req__success { text-align: center; padding: 34px 0 0; }
+.ath-req__success.is-in .ath-req__check svg { opacity: 1; }
+.ath-req__check { width: 76px; height: 76px; margin: 0 auto 22px; }
+.ath-req__check svg { width: 100%; height: 100%; display: block; }
+.ath-req__check-ring {
+  stroke-dasharray: 183; stroke-dashoffset: 183;
+  animation: ath-req-draw .7s cubic-bezier(0.4, 0, 0.2, 1) .15s forwards;
+}
+.ath-req__check-tick {
+  stroke-dasharray: 36; stroke-dashoffset: 36;
+  animation: ath-req-draw .45s cubic-bezier(0.4, 0, 0.2, 1) .7s forwards;
+}
+@keyframes ath-req-draw { to { stroke-dashoffset: 0; } }
+.ath-req__success-title {
+  margin: 0;
+  font-size: clamp(28px, 4.4vw, 38px); font-weight: 700; letter-spacing: -0.03em;
+  background: linear-gradient(161deg, rgb(255, 255, 255) -42%, rgb(21, 96, 189) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.ath-req__success-copy {
+  margin: 12px auto 0; max-width: 440px;
+  font-size: 15.5px; font-weight: 500; line-height: 1.55;
+  color: rgba(15, 57, 139, 0.62);
+}
+.ath-req__success-copy strong { color: rgb(15, 57, 139); font-weight: 700; }
+.ath-req__actions--success { justify-content: center; margin-top: 30px; }
+
+/* ------------------------------- entrance --------------------------------- */
+/* Staggered rise on load — the receiving half of the veil page transition. */
+@keyframes ath-req-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+.ath-req__head, .ath-req__card, .ath-req__success:not([hidden]) {
+  animation: ath-req-rise .55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.ath-req__card { animation-delay: .12s; }
+
+/* ------------------------------- responsive ------------------------------- */
+@media (max-width: 640px) {
+  .ath-req { padding-left: 18px; padding-right: 18px; }
+  .ath-req__grid { grid-template-columns: 1fr; row-gap: 18px; }
+  .ath-req__head { margin-bottom: 30px; }
+  .ath-req__actions { flex-direction: column; align-items: stretch; text-align: center; }
+  .ath-req__actions .glass-button-wrap { width: 100%; }
+  .ath-req__actions .glass-button { width: 100%; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ath-req__head, .ath-req__card, .ath-req__success:not([hidden]) { animation: none; }
+  .ath-req__check-ring, .ath-req__check-tick { animation: none; stroke-dashoffset: 0; }
+  .ath-req__card.is-leaving { transition: none; }
+}
