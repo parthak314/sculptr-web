@@ -95,19 +95,27 @@ body {
   width: 100%; box-sizing: border-box;
   height: 46px; padding: 0 18px;
   border-radius: 999px;                       /* pill inputs, same as the app's sign-in */
-  border: 1px solid rgba(15, 57, 139, 0.16);
-  background: rgba(255, 255, 255, 0.85);
   font-family: inherit; font-size: 15px; font-weight: 500;
   color: rgb(15, 57, 139);
   outline: none;
-  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+  /* Exact port of the app's input treatment (app/theme-app.css, the
+     [data-slot='input']/[data-slot='textarea'] rules under .theme-v2) — same
+     resolved values as --s1-bg / --s2-bg / --border, not a recreation, so the
+     glow matches the app's sign-up page pixel for pixel. */
+  background: rgba(251, 252, 255, 0.20);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(16, 24, 40, 0.10);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
 }
-.ath-field__input::placeholder { color: rgba(15, 57, 139, 0.32); font-weight: 500; }
-.ath-field__input:hover { border-color: rgba(15, 57, 139, 0.28); }
-.ath-field__input:focus {
-  border-color: rgb(21, 96, 189);
-  background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(21, 96, 189, 0.13);
+.ath-field__input::placeholder { color: rgba(15, 57, 139, 0.42); font-weight: 500; }
+.ath-field__input:focus-visible {
+  background: rgba(251, 252, 255, 0.34);
+  border-color: rgba(0, 153, 255, 0.6);
+  box-shadow:
+    0 0 0 1px rgba(0, 153, 255, 0.28),
+    0 0 14px 1px rgba(0, 153, 255, 0.18),
+    0 4px 22px -4px rgba(0, 153, 255, 0.22);
 }
 .ath-field__input[aria-invalid="true"],
 .ath-field__input.is-invalid,
@@ -131,17 +139,24 @@ body {
   height: 46px; padding: 0 15px 0 18px;
   display: flex; align-items: center; justify-content: space-between; gap: 10px;
   border-radius: 999px;
-  border: 1px solid rgba(15, 57, 139, 0.16);
-  background: rgba(255, 255, 255, 0.85);
   font-family: inherit; font-size: 15px; font-weight: 500; color: rgb(15, 57, 139);
   text-align: left; cursor: pointer; outline: none;
-  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+  /* Same exact port as .ath-field__input — the dropdown trigger IS an input
+     visually, so it gets the identical app-sourced treatment. */
+  background: rgba(251, 252, 255, 0.20);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(16, 24, 40, 0.10);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
 }
-.ath-dd__trigger:hover { border-color: rgba(15, 57, 139, 0.28); }
 .ath-dd.is-open .ath-dd__trigger,
 .ath-dd__trigger:focus-visible {
-  border-color: rgb(21, 96, 189); background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(21, 96, 189, 0.13);
+  background: rgba(251, 252, 255, 0.34);
+  border-color: rgba(0, 153, 255, 0.6);
+  box-shadow:
+    0 0 0 1px rgba(0, 153, 255, 0.28),
+    0 0 14px 1px rgba(0, 153, 255, 0.18),
+    0 4px 22px -4px rgba(0, 153, 255, 0.22);
 }
 .ath-dd__value { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ath-dd__value.is-placeholder { color: rgba(15, 57, 139, 0.38); }
@@ -183,20 +198,24 @@ body {
 /* -------- referrer reveal ("Colleague or friend" follow-up) --------------- */
 /* Slides open under the dropdown when they picked colleague. The wrapper
    animates max-height with overflow hidden, so it needs inset padding on
-   ALL sides (not just left/right) or the focus ring's top/bottom get
-   guillotined right at the input's border edge — negative margin cancels
-   the padding's effect on width/position so the input still lines up with
-   the fields above it. */
+   ALL sides or the focus glow gets guillotined at the input's border edge —
+   negative margin cancels the padding's effect on width/position so the
+   input still lines up with the fields above it.
+   Padding is asymmetric because the app's exact glow (ported below) has a
+   3rd shadow layer with a +4px Y-offset, so the bottom bloom reaches much
+   further than the top — measured empirically (pixel-scanned the real
+   rendered glow, unclipped): ~19px top, ~50.5px bottom. Padded well past
+   both with margin to spare. */
 .ath-req__referrer {
   max-height: 0; opacity: 0; transform: translateY(-6px);
-  overflow: hidden; padding: 0 6px; margin: 0 -6px;
+  overflow: hidden; padding: 0 24px; margin: 0 -24px;
   transition: max-height .38s cubic-bezier(0.22, 1, 0.36, 1),
               opacity .3s ease, transform .38s cubic-bezier(0.22, 1, 0.36, 1),
               margin-top .38s cubic-bezier(0.22, 1, 0.36, 1),
               padding .38s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .ath-req__referrer.is-on {
-  max-height: 78px; opacity: 1; transform: none; margin-top: 10px; padding: 8px 6px;
+  max-height: 132px; opacity: 1; transform: none; margin-top: 10px; padding: 26px 24px 56px;
 }
 @media (prefers-reduced-motion: reduce) { .ath-req__referrer { transition: none; } }
 
