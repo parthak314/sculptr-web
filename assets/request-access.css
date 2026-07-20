@@ -181,18 +181,22 @@ body {
 }
 
 /* -------- referrer reveal ("Colleague or friend" follow-up) --------------- */
-/* Slides open under the dropdown when they picked colleague. The 4px inset
-   padding (with negative margin) keeps the input's focus ring unclipped while
-   the wrapper animates max-height with overflow hidden. */
+/* Slides open under the dropdown when they picked colleague. The wrapper
+   animates max-height with overflow hidden, so it needs inset padding on
+   ALL sides (not just left/right) or the focus ring's top/bottom get
+   guillotined right at the input's border edge — negative margin cancels
+   the padding's effect on width/position so the input still lines up with
+   the fields above it. */
 .ath-req__referrer {
   max-height: 0; opacity: 0; transform: translateY(-6px);
-  overflow: hidden; padding: 0 4px; margin: 0 -4px;
+  overflow: hidden; padding: 0 6px; margin: 0 -6px;
   transition: max-height .38s cubic-bezier(0.22, 1, 0.36, 1),
               opacity .3s ease, transform .38s cubic-bezier(0.22, 1, 0.36, 1),
-              margin-top .38s cubic-bezier(0.22, 1, 0.36, 1);
+              margin-top .38s cubic-bezier(0.22, 1, 0.36, 1),
+              padding .38s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .ath-req__referrer.is-on {
-  max-height: 64px; opacity: 1; transform: none; margin-top: 10px;
+  max-height: 78px; opacity: 1; transform: none; margin-top: 10px; padding: 8px 6px;
 }
 @media (prefers-reduced-motion: reduce) { .ath-req__referrer { transition: none; } }
 
