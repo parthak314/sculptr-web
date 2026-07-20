@@ -180,6 +180,22 @@ body {
   transform: rotate(45deg);
 }
 
+/* -------- referrer reveal ("Colleague or friend" follow-up) --------------- */
+/* Slides open under the dropdown when they picked colleague. The 4px inset
+   padding (with negative margin) keeps the input's focus ring unclipped while
+   the wrapper animates max-height with overflow hidden. */
+.ath-req__referrer {
+  max-height: 0; opacity: 0; transform: translateY(-6px);
+  overflow: hidden; padding: 0 4px; margin: 0 -4px;
+  transition: max-height .38s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity .3s ease, transform .38s cubic-bezier(0.22, 1, 0.36, 1),
+              margin-top .38s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.ath-req__referrer.is-on {
+  max-height: 64px; opacity: 1; transform: none; margin-top: 10px;
+}
+@media (prefers-reduced-motion: reduce) { .ath-req__referrer { transition: none; } }
+
 /* -------- custom checkbox (Instagram opt-out) ----------------------------- */
 .ath-check {
   display: inline-flex; align-items: center; gap: 9px;

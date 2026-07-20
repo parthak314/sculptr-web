@@ -147,6 +147,21 @@
   document.addEventListener("click", function () { closeAllDropdowns(null); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeAllDropdowns(null); });
 
+  /* --------------- referrer reveal (picked "Colleague or friend") ---------- */
+  var referrerWrap = document.getElementById("f-referrer-wrap");
+  var referrerInput = document.getElementById("f-referrer");
+  var heardHidden = document.getElementById("f-heard");
+  if (referrerWrap && referrerInput && heardHidden) {
+    heardHidden.addEventListener("change", function () {
+      var on = heardHidden.value === "colleague";
+      referrerWrap.classList.toggle("is-on", on);
+      referrerWrap.setAttribute("aria-hidden", on ? "false" : "true");
+      referrerInput.setAttribute("tabindex", on ? "0" : "-1");
+      if (on) setTimeout(function () { referrerInput.focus(); }, 240);
+      else referrerInput.value = "";
+    });
+  }
+
   /* ----------------------- Instagram opt-out checkbox ---------------------- */
   var noIG = document.getElementById("f-noig");
   var igInput = document.getElementById("f-instagram");
@@ -211,6 +226,12 @@
     if (!validate()) return;
 
     var email = val("f-email");
+    // "Colleague or friend" follow-up rides along in the message, so it shows
+    // in the admin request panel without any schema change.
+    var message = val("f-message");
+    if (val("f-heard") === "colleague" && val("f-referrer")) {
+      message = "Referred by: " + val("f-referrer") + (message ? "\n\n" + message : "");
+    }
     var payload = {
       clinicName: val("f-clinic"),
       contactName: val("f-name"),
@@ -219,7 +240,7 @@
       phone: val("f-phone") || undefined,
       website: noInstagram() ? undefined : (val("f-instagram") || undefined),
       heardFrom: val("f-heard"),
-      message: val("f-message") || undefined,
+      message: message || undefined,
       company: val("f-company") || undefined   // honeypot
     };
 

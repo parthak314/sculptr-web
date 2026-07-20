@@ -812,16 +812,20 @@
           </button>
           <input type="hidden" id="f-heard" name="heardFrom" value="">
           <ul class="ath-dd__panel" role="listbox" aria-label="How did you find out about us?">
+            <li class="ath-dd__opt" data-value="colleague">Colleague or friend</li>
             <li class="ath-dd__opt" data-value="google">Google search</li>
             <li class="ath-dd__opt" data-value="instagram">Instagram</li>
             <li class="ath-dd__opt" data-value="linkedin">LinkedIn</li>
-            <li class="ath-dd__opt" data-value="colleague">Colleague or friend</li>
             <li class="ath-dd__opt" data-value="conference">Conference / event</li>
             <li class="ath-dd__opt" data-value="press">Press / article</li>
             <li class="ath-dd__opt" data-value="other">Other</li>
           </ul>
         </div>
         <p class="ath-field__error" data-error-for="f-heard"></p>
+        <!-- revealed when they picked "Colleague or friend" -->
+        <div class="ath-req__referrer" id="f-referrer-wrap" aria-hidden="true">
+          <input class="ath-field__input" id="f-referrer" name="referrer" type="text" autocomplete="off" tabindex="-1" placeholder="Who can we thank? Their name or clinic">
+        </div>
       </div>
       <div class="ath-field ath-field--full">
         <label class="ath-field__label" for="f-message">Anything else? <span class="ath-field__opt">optional</span></label>
