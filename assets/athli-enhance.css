@@ -1354,3 +1354,23 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
 }
 .ath-veil.is-on { opacity: 1; pointer-events: auto; }
 @media (prefers-reduced-motion: reduce) { .ath-veil { transition: none; } }
+
+/* =============================================================================
+   LITE MODE — crash backstop. `html.ath-lite` is set by the watchdog in
+   athli-enhance.js ONLY after two detected mid-use crashes on this device
+   (or explicitly via ?perf=lite; ?perf=full clears it). Nobody else ever sees
+   these rules: the full design — particles and blur included — stays exactly
+   as designed on every device that doesn't crash. On a crashing device the
+   animated background is replaced by the same static brand glow, and the
+   grain overlay is dropped, so the page can actually be used.
+   ========================================================================== */
+html.ath-lite #main [data-framer-name="Gradient Blur"] {
+  filter: none !important;
+  -webkit-filter: none !important;
+  background:
+    radial-gradient(120% 90% at 50% 0%, rgba(0, 136, 255, 0.16), rgba(181, 225, 255, 0.05) 55%, rgba(255, 255, 255, 0) 78%) !important;
+}
+html.ath-lite #main [data-framer-name="Gradient Blur"] canvas { display: none !important; }
+/* grain overlays — the index and request/contact exports use different hashes */
+html.ath-lite .framer-13nk9po-container,
+html.ath-lite .framer-1yv7k8j-container { display: none !important; }

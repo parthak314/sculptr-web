@@ -45,6 +45,93 @@
   var RAF0 = window.requestAnimationFrame
     ? window.requestAnimationFrame.bind(window)
     : function (f) { return setTimeout(function () { f(Date.now()); }, 16); };
+
+  /* --- Phones: swallow height-only window resizes -----------------------------
+     The browser URL bar collapses the moment scrolling starts, firing `resize`
+     into every listener the Framer runtime + tsParticles register — reflow
+     probes and canvas re-allocation exactly when the page is busiest. Nothing
+     on this site needs to respond to a height-only change (breakpoints are
+     width-based; the fixed background wrapper has a fixed height; CSS handles
+     viewport units), so a first-registered listener stops the event before the
+     runtime's listeners see it. Width changes (rotation, real resizes, and any
+     resize while the width also changed) pass through untouched. */
+  (function muteHeightOnlyResize() {
+    try {
+      if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
+      var lastW = window.innerWidth;
+      window.addEventListener("resize", function (e) {
+        if (window.innerWidth === lastW) { e.stopImmediatePropagation(); return; }
+        lastW = window.innerWidth;
+      }, true);
+    } catch (e) {}
+  })();
+
+  /* --- Crash watchdog + persistent lite mode ---------------------------------
+     Last line of defence so a crash can never loop: a 1s heartbeat records
+     "alive + not cleanly exited" in sessionStorage; pagehide/backgrounding mark
+     a clean exit (so the OS reclaiming a BACKGROUND tab never counts). If a
+     load finds the previous session died unclean within the last 90s, that is
+     a mid-use crash — after TWO of those, this device permanently switches to
+     lite mode: the WebGL particle canvas and grain overlay are replaced by the
+     static brand glow. Working devices are completely unaffected — the full
+     design (particles + blur included) only degrades on a device that has
+     already crashed twice. A clean session longer than 45s resets the counter.
+     Manual override for testing: ?perf=lite forces it, ?perf=full clears it. */
+  var ATH_LITE = false;
+  (function crashWatchdog() {
+    var LS = "ath-crash-count", SS = "ath-heartbeat", LM = "ath-lite";
+    function qs(name) { try { return new URLSearchParams(location.search).get(name); } catch (e) { return null; } }
+    try {
+      var force = qs("perf");
+      if (force === "full") { localStorage.removeItem(LM); localStorage.removeItem(LS); }
+      else if (force === "lite") { localStorage.setItem(LM, "1"); }
+
+      // count a crash: previous heartbeat exists, wasn't cleanly ended, and is recent
+      var prev = null;
+      try { prev = JSON.parse(sessionStorage.getItem(SS) || "null"); } catch (e) {}
+      if (prev && !prev.clean && Date.now() - prev.t < 90000) {
+        var n = (parseInt(localStorage.getItem(LS), 10) || 0) + 1;
+        localStorage.setItem(LS, String(n));
+        if (n >= 2) localStorage.setItem(LM, "1");
+      }
+
+      ATH_LITE = localStorage.getItem(LM) === "1";
+      if (ATH_LITE) document.documentElement.classList.add("ath-lite");
+
+      // heartbeat for THIS session
+      var born = Date.now();
+      function beat(clean) {
+        try { sessionStorage.setItem(SS, JSON.stringify({ t: Date.now(), clean: !!clean })); } catch (e) {}
+      }
+      beat(false);
+      setInterval(function () { beat(false); }, 1000);
+      function markClean() {
+        beat(true);
+        // a healthy session (>45s, exited normally) clears the strike counter
+        if (Date.now() - born > 45000) { try { localStorage.setItem(LS, "0"); } catch (e) {} }
+      }
+      window.addEventListener("pagehide", markClean);
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) markClean(); else beat(false);
+      });
+    } catch (e) {}
+  })();
+
+  /* Lite mode: stop the WebGL background before the Framer runtime loads (the
+     effect takes its standard no-WebGL fallback — verified error-free). The
+     matching CSS (html.ath-lite rules) paints the static glow and hides the
+     grain overlay. */
+  (function liteModeWebGL() {
+    if (!ATH_LITE) return;
+    try {
+      var orig = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (type) {
+        if (type === "webgl" || type === "webgl2" || type === "experimental-webgl") return null;
+        return orig.apply(this, arguments);
+      };
+    } catch (e) {}
+  })();
+
   /* Phones: cap the pixel ratio the JS runtime sees at 1. Decompiling every
      chunk the page loads confirmed the ONLY real consumer is the tsParticles
      background (detectRetina -> this.pixelRatio = devicePixelRatio; it scales
