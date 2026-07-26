@@ -1329,11 +1329,11 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   /* Pull the whole nav bar closer to the edges so the logo sits nearer the left
      (was ~33px in; now ~22px — a healthy margin, not touching the edge). */
   .ath-nav__inner { padding-left: 14px; padding-right: 14px; }
-  /* Nudge just the logo the rest of the way to a 5px edge distance, without
+  /* Nudge just the logo the rest of the way to a 1px edge distance, without
      touching the pill's own padding (keeps the hamburger side symmetric). Was
-     ~23px (8px nav shell + 1px pill border + 14px pill padding); -18px lands
-     it at 5px. */
-  .ath-nav__logo { margin-left: -18px; }
+     ~23px (8px nav shell + 1px pill border + 14px pill padding); -22px lands
+     it at 1px. */
+  .ath-nav__logo { margin-left: -22px; }
 
   /* --- Hero: raise it and tighten the vertical rhythm without jamming. The hero
      content column (framer-wqgg98) had padding-top:41px and a 90px gap between
