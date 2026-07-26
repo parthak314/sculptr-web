@@ -1239,8 +1239,15 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   /* P0-A — Neutralise the ~60 decorative blurred radial-gradient "Glow" planes.
      Each blur() forces its own composited GPU texture; on a phone they pile up
      as you scroll and exhaust GPU memory (tab crash). The gradients are already
-     soft, so removing the blur is visually near-identical. */
-  #main [data-framer-name="Glow"] {
+     soft, so removing the blur is visually near-identical.
+     EXCLUDING glow layers inside a button/link (:not(a *, button *)): those are
+     a FUNCTIONAL ambient glow meant to blur into a soft halo behind the pill,
+     not decoration — stripping their blur left a hard, unblurred edge peeking
+     out wherever its border-radius doesn't exactly match the pill's (e.g. the
+     "Request Access" hero CTA), a visible crescent sliver bug. Only ~3 of the
+     61 Glow elements sit inside a button across all pages, so this keeps the
+     GPU win everywhere except those handful that actually need the blur. */
+  #main [data-framer-name="Glow"]:not(a *, button *) {
     filter: none !important;
     -webkit-filter: none !important;
   }
