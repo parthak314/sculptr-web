@@ -1340,7 +1340,15 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
      its stacked blocks (badge / heading / tagline / buttons). Framer-hashed
      classes — re-check these hashes on any Framer re-export. --- */
   #main .framer-wqgg98 { padding-top: 18px !important; gap: 34px !important; row-gap: 34px !important; }
-  #main .framer-1dci305 { padding-top: 18px !important; padding-bottom: 18px !important; }
+  /* CTA wrapper: pull it tighter with NEGATIVE MARGIN, never by shrinking its
+     padding. This element is overflow:hidden, and its 49px padding is what
+     keeps the Request Access button's soft glow/halo inside the clip box —
+     cutting the padding to 18px put the button's top edge 4px ABOVE the clip
+     boundary, slicing the button and exposing the hard edge of its blue Glow
+     layer (the "half the button is missing" + blue crescent bug). Negative
+     margin reclaims the same vertical space in flow while the padding — and
+     therefore the clip box — stays intact. */
+  #main .framer-1dci305 { margin-top: -31px !important; margin-bottom: -31px !important; }
 
   /* --- Hero screenshot: the -100px "peek up into the hero" pull is a desktop
      device — on a phone it drags the photo up OVER the Request Access / Find Out
