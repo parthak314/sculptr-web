@@ -50,6 +50,12 @@ body {
   margin: 0;
   font-size: clamp(34px, 5.4vw, 52px);
   font-weight: 700; letter-spacing: -0.03em; line-height: 1.06;
+  /* The gradient is clipped to the text box, and this line-height is tighter
+     than Satoshi's ascent+descent — so descenders ("g" in Bring, "y" in your)
+     fall outside the painted box and get sliced. Extend the box downward; the
+     matching negative margin keeps the layout pixel-identical. */
+  padding-bottom: 0.18em;
+  margin-bottom: -0.18em;
   background: linear-gradient(161deg, rgb(255, 255, 255) -42%, rgb(21, 96, 189) 100%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
@@ -310,6 +316,9 @@ body {
 .ath-req__success-title {
   margin: 0;
   font-size: clamp(28px, 4.4vw, 38px); font-weight: 700; letter-spacing: -0.03em;
+  /* same descender guard as .ath-req__title ("q" in Request) */
+  padding-bottom: 0.18em;
+  margin-bottom: -0.18em;
   background: linear-gradient(161deg, rgb(255, 255, 255) -42%, rgb(21, 96, 189) 100%);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent; color: transparent;
