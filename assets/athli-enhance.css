@@ -990,6 +990,12 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   /* less at the top than the bottom: the three steps above end in captions, so
      the old symmetrical 120px read as a hole between the two */
   padding: clamp(40px, 5.4vw, 76px) 24px clamp(56px, 9vw, 120px);
+}
+/* No traction strip below the testimonials (production): the bottom padding
+   was spacing a block that isn't rendered, so it read as a hole above the
+   features box. ~30% off the measured gap. */
+.ath-below--no-counts {
+  padding-bottom: clamp(30px, 4.2vw, 55px);
   background: transparent;            /* plain white page, like the other sections */
 }
 /* scroll-reveal for each block */

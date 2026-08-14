@@ -1500,7 +1500,10 @@
       if (!document.querySelector(".ath-below")) {
         var stats = document.querySelector(".ath-stats");
         if (stats && stats.parentNode) {
-          var sec = el("section", { class: "ath-below", "aria-label": "What clinicians say and traction" });
+          // Without the traction strip the section's bottom padding is sized
+          // for a block that isn't there, leaving a hole above the features
+          // box. Flag it so the CSS can close that up.
+          var sec = el("section", { class: "ath-below" + (SHOW_COUNTS ? "" : " ath-below--no-counts"), "aria-label": "What clinicians say and traction" });
           sec.innerHTML = HTML;
           stats.parentNode.insertBefore(sec, stats);   // after the 3 steps, before the stats card
           wire(sec);
