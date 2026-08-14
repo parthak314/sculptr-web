@@ -346,26 +346,12 @@ body {
 
 /* ------------------------------- responsive ------------------------------- */
 @media (max-width: 640px) {
-  .ath-req { padding-left: 18px; padding-right: 18px; padding-top: 108px; }
+  .ath-req { padding-left: 18px; padding-right: 18px; }
   .ath-req__grid { grid-template-columns: 1fr; row-gap: 18px; }
   .ath-req__head { margin-bottom: 30px; }
-  .ath-req__sub { font-size: 15px; }
   .ath-req__actions { flex-direction: column; align-items: stretch; text-align: center; }
   .ath-req__actions .glass-button-wrap { width: 100%; }
   .ath-req__actions .glass-button { width: 100%; justify-content: center; }
-
-  /* iOS Safari zooms the whole page when focusing any control whose font-size
-     is under 16px — and it doesn't zoom back out. Pin every focusable field to
-     16px on phones (desktop keeps the 15px design size). */
-  .ath-field__input, .ath-field__textarea, .ath-dd__trigger { font-size: 16px; }
-
-  /* Comfortable thumb targets for the custom dropdown options (were ~35px). */
-  .ath-dd__opt { padding: 12px 14px; font-size: 15px; }
-
-  /* The reveal's content measured 128px against the 132px cap — zero headroom
-     once the input grows to 16px. The cap only shapes the animation, so give
-     it slack; the wrapper still collapses to its natural height. */
-  .ath-req__referrer.is-on { max-height: 190px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -12,21 +12,28 @@
   var CONFIG = {
     logo: "https://framerusercontent.com/images/2s5IeQ3VOaEwTjCOKM1C7rUbF2Q.png",
     homeHref: "./",
+    // One Contact target for the nav and the footer, so the two can't drift.
+    contactHref: "./contact",
     // Center nav links — `scroll` entries smooth-scroll to an in-page section.
     navLinks: [
       { label: "How it works", href: "#", scroll: ".ath-how-head" },
+      { label: "Features", href: "#", scroll: ".ath-feat" },
+      { label: "Demo", href: "#", scroll: ".ath-demo" },
+      { label: "Pricing", href: "#", scroll: ".ath-pr" },
       { label: "FAQ", href: "#faq", scroll: "#faq" },
-      { label: "Contact", href: "./contact" }
+      { label: "Contact", href: null, contact: true }
     ],
     ctaLabel: "Launch App",                 // CTA (stays the same when scrolled)
     ctaLabelScrolled: "Launch App",
     ctaHref: "https://app.sculptrlabs.com",
+    // Privacy/Terms live on the app (app/(public)/legal/[slug]) — the same
+    // documents the sign-up flow links to, so there's one copy of each.
     footerLinks: [
       { label: "How it works", href: "#", scroll: ".ath-how-head" },
       { label: "FAQ", href: "#faq", scroll: "#faq" },
-      { label: "Contact", href: "./contact" },
-      { label: "Privacy", href: "#" },
-      { label: "Terms", href: "#" }
+      { label: "Contact", href: null, contact: true },
+      { label: "Privacy", href: "https://app.sculptrlabs.com/legal/privacy" },
+      { label: "Terms", href: "https://app.sculptrlabs.com/legal/terms" }
     ],
     socials: [],   // hidden for now
     copyright: "© " + 2026 + " Sculptr. All rights reserved."
@@ -34,241 +41,6 @@
 
   var THEME_KEY = "sculptr-theme";
   var SVGNS = "http://www.w3.org/2000/svg";
-
-  /* --- Mobile: gently slow the continuous WebGL background ("particles") -------
-     They read too fast on small screens; desktop is left exactly as-is. On phones
-     we scale the timestamp handed to rAF callbacks so time-based loops (the
-     endless particle shader) advance more slowly. RAF0 is the ORIGINAL, unscaled
-     rAF — our own count-up / dial / swap loops use it so their speed is unchanged,
-     and scaling only kicks in ~1.8s after load so the hero's one-shot fade-ins
-     play at full speed first. Tune SLOW_FACTOR (or delete this block) to taste. */
-  var RAF0 = window.requestAnimationFrame
-    ? window.requestAnimationFrame.bind(window)
-    : function (f) { return setTimeout(function () { f(Date.now()); }, 16); };
-
-  /* --- Phones: swallow height-only window resizes -----------------------------
-     The browser URL bar collapses the moment scrolling starts, firing `resize`
-     into every listener the Framer runtime + tsParticles register — reflow
-     probes and canvas re-allocation exactly when the page is busiest. Nothing
-     on this site needs to respond to a height-only change (breakpoints are
-     width-based; the fixed background wrapper has a fixed height; CSS handles
-     viewport units), so a first-registered listener stops the event before the
-     runtime's listeners see it. Width changes (rotation, real resizes, and any
-     resize while the width also changed) pass through untouched. */
-  (function muteHeightOnlyResize() {
-    try {
-      if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
-      var lastW = window.innerWidth;
-      window.addEventListener("resize", function (e) {
-        if (window.innerWidth === lastW) { e.stopImmediatePropagation(); return; }
-        lastW = window.innerWidth;
-      }, true);
-    } catch (e) {}
-  })();
-
-  /* --- Crash watchdog + persistent lite mode ---------------------------------
-     Last line of defence so a crash can never loop: a 1s heartbeat records
-     "alive + not cleanly exited" in sessionStorage; pagehide/backgrounding mark
-     a clean exit (so the OS reclaiming a BACKGROUND tab never counts). If a
-     load finds the previous session died unclean within the last 90s, that is
-     a mid-use crash — after TWO of those, this device permanently switches to
-     lite mode: the WebGL particle canvas and grain overlay are replaced by the
-     static brand glow. Working devices are completely unaffected — the full
-     design (particles + blur included) only degrades on a device that has
-     already crashed twice. A clean session longer than 45s resets the counter.
-     Manual override for testing: ?perf=lite forces it, ?perf=full clears it. */
-  var ATH_LITE = false;
-  (function crashWatchdog() {
-    var LS = "ath-crash-count", SS = "ath-heartbeat", LM = "ath-lite";
-    function qs(name) { try { return new URLSearchParams(location.search).get(name); } catch (e) { return null; } }
-    try {
-      var force = qs("perf");
-      if (force === "full") { localStorage.removeItem(LM); localStorage.removeItem(LS); }
-      else if (force === "lite") { localStorage.setItem(LM, "1"); }
-
-      // count a crash: previous heartbeat exists, wasn't cleanly ended, and is recent
-      var prev = null;
-      try { prev = JSON.parse(sessionStorage.getItem(SS) || "null"); } catch (e) {}
-      if (prev && !prev.clean && Date.now() - prev.t < 90000) {
-        var n = (parseInt(localStorage.getItem(LS), 10) || 0) + 1;
-        localStorage.setItem(LS, String(n));
-        if (n >= 2) localStorage.setItem(LM, "1");
-      }
-
-      ATH_LITE = localStorage.getItem(LM) === "1";
-      if (ATH_LITE) document.documentElement.classList.add("ath-lite");
-
-      // heartbeat for THIS session
-      var born = Date.now();
-      function beat(clean) {
-        try { sessionStorage.setItem(SS, JSON.stringify({ t: Date.now(), clean: !!clean })); } catch (e) {}
-      }
-      beat(false);
-      setInterval(function () { beat(false); }, 1000);
-      function markClean() {
-        beat(true);
-        // a healthy session (>45s, exited normally) clears the strike counter
-        if (Date.now() - born > 45000) { try { localStorage.setItem(LS, "0"); } catch (e) {} }
-      }
-      window.addEventListener("pagehide", markClean);
-      document.addEventListener("visibilitychange", function () {
-        if (document.hidden) markClean(); else beat(false);
-      });
-    } catch (e) {}
-  })();
-
-  /* Lite mode: stop the WebGL background before the Framer runtime loads (the
-     effect takes its standard no-WebGL fallback — verified error-free). The
-     matching CSS (html.ath-lite rules) paints the static glow and hides the
-     grain overlay. */
-  (function liteModeWebGL() {
-    if (!ATH_LITE) return;
-    try {
-      var orig = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function (type) {
-        if (type === "webgl" || type === "webgl2" || type === "experimental-webgl") return null;
-        return orig.apply(this, arguments);
-      };
-    } catch (e) {}
-  })();
-
-  /* Phones: cap the pixel ratio the JS runtime sees at 1. Decompiling every
-     chunk the page loads confirmed the ONLY real consumer is the tsParticles
-     background (detectRetina -> this.pixelRatio = devicePixelRatio; it scales
-     BOTH the canvas backing and its draw coordinates from this one value, so
-     the cap keeps them consistent). The canvas is a position:fixed layer that
-     re-renders through our blur(20px) on every frame of the whole scroll — the
-     blur destroys all detail finer than ~30 device px, so backing above 1x CSS
-     resolution is provably invisible work: 4-9x less shader fill + framebuffer
-     memory per frame. Native <img srcset> selection uses the browser-internal
-     DPR and is unaffected (verified). If a real-device A/B ever shows a
-     difference, raise this to 1.5 before touching anything else.
-     NB (re-export checklist): re-verify motion.*.mjs still reads
-     performance.now() in its frameloop and that Particles.*.mjs is still the
-     only devicePixelRatio consumer. */
-  (function capMobileDpr() {
-    try {
-      if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
-      if (window.devicePixelRatio > 1) {
-        Object.defineProperty(window, "devicePixelRatio", {
-          get: function () { return 1; },
-          configurable: true
-        });
-      }
-    } catch (e) {}
-  })();
-
-  /* Phones: cap responsive-image density at 2x — the likely OOM driver.
-     The six product screenshots carry srcset candidates up to 2048-3920w with a
-     phone slot of ~386 CSS px; a 3x phone computes 386x3=1158px and so picks the
-     2048w candidate: ~13 MB of decoded RGBA PER IMAGE, ~80 MB total, all decoded
-     mid-scroll as the browser's lazy-load lookahead reaches them (right around
-     the stats section — the reported crash site). 2x density is the standard
-     imperceptibility bar for photos; per image we keep the smallest candidate
-     covering 2x of its actual slot and drop only the larger ones. Runs before
-     lazy images load; a cheap observer re-caps anything Framer re-renders. */
-  (function capImageDensityOnPhone() {
-    try {
-      if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
-    } catch (e) { return; }
-    function slotPx(img) {
-      // Evaluate the img's sizes attribute: first matching media condition wins.
-      var sizes = img.getAttribute("sizes") || "";
-      var parts = sizes.split(",");
-      for (var i = 0; i < parts.length; i++) {
-        var p = parts[i].trim();
-        var m = p.match(/^\((.+)\)\s+(.+)$/);
-        var cond = m ? "(" + m[1] + ")" : null;
-        var len = m ? m[2] : p;
-        if (cond) { try { if (!window.matchMedia(cond).matches) continue; } catch (e) { continue; } }
-        var px = len.match(/^([\d.]+)px$/);
-        if (px) return parseFloat(px[1]);
-        var vw = len.match(/^([\d.]+)vw$/);
-        if (vw) return (parseFloat(vw[1]) / 100) * window.innerWidth;
-        return window.innerWidth;       // calc()/unknown: assume full viewport (conservative)
-      }
-      return window.innerWidth;
-    }
-    function cap(img) {
-      var ss = img.getAttribute("srcset");
-      if (!ss || img.getAttribute("data-ath-capped") === ss) return;
-      var cands = [];
-      ss.split(",").forEach(function (c) {
-        var m = c.trim().match(/^(\S+)\s+([\d.]+)w$/);
-        if (m) cands.push({ url: m[1], w: parseFloat(m[2]), raw: c.trim() });
-      });
-      if (cands.length < 2) return;                       // nothing to prune / x-descriptors
-      var target = slotPx(img) * 2;                       // 2x density cap
-      cands.sort(function (a, b) { return a.w - b.w; });
-      var kept = [], covered = false;
-      for (var i = 0; i < cands.length; i++) {
-        if (!covered) { kept.push(cands[i]); if (cands[i].w >= target) covered = true; }
-      }
-      if (kept.length === cands.length) { img.setAttribute("data-ath-capped", ss); return; }
-      var next = kept.map(function (c) { return c.raw; }).join(", ");
-      img.setAttribute("srcset", next);
-      img.setAttribute("data-ath-capped", next);
-    }
-    function sweep() {
-      var imgs = document.querySelectorAll("img[srcset]");
-      for (var i = 0; i < imgs.length; i++) cap(imgs[i]);
-    }
-    sweep();
-    try {
-      var pending = false;
-      new MutationObserver(function () {
-        if (pending) return; pending = true;
-        requestAnimationFrame(function () { pending = false; sweep(); });
-      }).observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["srcset"] });
-    } catch (e) {}
-  })();
-
-  /* Phones: Framer's SSR pins ~14 hero elements with inline will-change:transform
-     for their one-shot appear animations, holding GPU layers (textures) forever.
-     Release them once the appear animations are done — the layers collapse with
-     zero visual change and the memory comes back. Two passes in case the runtime
-     re-renders after hydration. */
-  (function releaseWillChangeOnMobile() {
-    try {
-      if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
-    } catch (e) { return; }
-    function strip() {
-      try {
-        var els = document.querySelectorAll('[data-framer-root] [style*="will-change"]');
-        for (var i = 0; i < els.length; i++) {
-          if (getComputedStyle(els[i]).willChange === "transform") els[i].style.willChange = "auto";
-        }
-      } catch (e) {}
-    }
-    setTimeout(strip, 4000);
-    setTimeout(strip, 10000);
-  })();
-
-  (function slowBackgroundOnMobile() {
-    var isMobile = false;
-    try { isMobile = window.matchMedia && window.matchMedia("(max-width: 860px)").matches; } catch (e) {}
-    if (!isMobile || !window.requestAnimationFrame) return;
-    /* Verified against the deployed bundles: framer-motion's frameloop reads
-       performance.now() and ignores this timestamp entirely; the only scaled-
-       clock consumer is the tsParticles background, whose time handling is
-       self-consistent (and whose fpsLimit gate means this scaler also halves
-       its paint rate — removing it would RAISE GPU load). The clock below is
-       continuous (base = first post-activation timestamp) and kept strictly
-       monotonic as belt-and-braces. Re-export checklist: re-verify the motion
-       chunk still uses performance.now() before keeping this. */
-    var SLOW_FACTOR = 0.55, base = null, active = false, last = 0;
-    setTimeout(function () { active = true; }, 1800);
-    window.requestAnimationFrame = function (cb) {
-      return RAF0(function (t) {
-        var out;
-        if (!active) { out = t; }
-        else { if (base === null) base = t; out = base + (t - base) * SLOW_FACTOR; }
-        if (out <= last) out = last + 0.1;
-        last = out;
-        cb(out);
-      });
-    };
-  })();
 
   /* ----------------------------- helpers ---------------------------------- */
   function el(tag, attrs, kids) {
@@ -338,6 +110,14 @@
     a.addEventListener("click", function (e) { e.preventDefault(); smoothTo(sel); });
   }
 
+  // Contact is defined once; both link lists take it from there.
+  (function resolveContact() {
+    var lists = [CONFIG.navLinks, CONFIG.footerLinks];
+    for (var i = 0; i < lists.length; i++)
+      for (var j = 0; j < lists[i].length; j++)
+        if (lists[i][j].contact) lists[i][j].href = CONFIG.contactHref;
+  })();
+
   function buildNav() {
     var logo = el("a", { class: "ath-nav__logo", href: CONFIG.homeHref, "aria-label": "Sculptr home" },
       [el("img", { src: CONFIG.logo, alt: "Sculptr" })]);
@@ -382,6 +162,37 @@
   }
 
   /* ----------------------------- footer ----------------------------------- */
+  /* Quiet reassurance strip above the wordmark: the GDPR badge on its own,
+     then three one-line claims. Each item is self-contained — the row is a
+     wrapping flex list with no nth-child or sibling rules — so any one of them
+     can be dropped without the rest shifting or a separator dangling. */
+  var TRUST_ITEMS = [
+    { label: "Encrypted in transit and at rest",
+      path: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' },
+    { label: "Never used to train models",
+      path: '<path d="M13.67 8H18a2 2 0 0 1 2 2v4.33"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M22 22 2 2"/><path d="M8 8H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 1.414-.586"/><path d="M9 13v2"/><path d="M9.67 4H12v2.33"/>' },
+    { label: "Deleted on request",
+      path: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>' }
+  ];
+  var TRUST_NOTE = "Sculptr produces illustrative simulations to support patient conversations. "
+    + "It is not a medical device and does not predict or guarantee clinical outcomes.";
+
+  function buildTrustRow() {
+    var items = [el("li", { class: "ath-trust__item ath-trust__item--badge" },
+      [el("img", { class: "ath-trust__badge", src: "/images/gdpr-compliant.png", alt: "GDPR compliant", loading: "lazy", draggable: "false" })])];
+    for (var i = 0; i < TRUST_ITEMS.length; i++) {
+      var t = TRUST_ITEMS[i];
+      items.push(el("li", { class: "ath-trust__item" }, [
+        icon("0 0 24 24", t.path, { cls: "ath-trust__icon", sw: "1.75" }),
+        el("span", { html: t.label })
+      ]));
+    }
+    return el("div", { class: "ath-trust" }, [
+      el("ul", { class: "ath-trust__row" }, items),
+      el("p", { class: "ath-trust__note", html: TRUST_NOTE })
+    ]);
+  }
+
   function buildFooter() {
     var logo = el("a", { class: "ath-footer__logo", href: CONFIG.homeHref, "aria-label": "Sculptr home" },
       [el("img", { src: CONFIG.logo, alt: "Sculptr" })]);
@@ -389,6 +200,11 @@
       CONFIG.footerLinks.map(function (l) {
         var a = el("a", { href: l.href, html: l.label });
         if (l.scroll) wireScrollLink(a, l.scroll);
+        // Site-internal hop: same white veil as every other route change.
+        if (l.fade) a.addEventListener("click", function (e) {
+          e.preventDefault(); e.stopPropagation();
+          navigateWithFade(this.getAttribute("href"));
+        });
         return a;
       }));
     // socials hidden for now (CONFIG.socials empty) — skip the block entirely
@@ -397,7 +213,7 @@
         return el("a", { href: s.href, target: "_blank", rel: "noopener noreferrer", "aria-label": s.label }, [filledIcon(s.path)]);
       })) : null;
     var copy = el("p", { class: "ath-footer__copy", html: CONFIG.copyright });
-    var inner = el("div", { class: "ath-footer__inner" }, [logo, links, social, copy]);
+    var inner = el("div", { class: "ath-footer__inner" }, [buildTrustRow(), logo, links, social, copy]);
     var footer = el("footer", { class: "ath-footer" }, [inner]);
     document.body.appendChild(footer);
   }
@@ -423,18 +239,10 @@
         var y = window.scrollY || document.documentElement.scrollTop;
         var scrolled = y > 50;
         nav.classList.toggle("is-scrolled", scrolled);
-        /* Only write when the label actually changes. An unconditional
-           textContent assignment replaces the text node — a DOM mutation on
-           EVERY scroll frame that woke every body-wide MutationObserver on the
-           page (each running document-wide sweeps), all to re-write the same
-           string. */
-        if (ctaText) {
-          var want = scrolled ? CONFIG.ctaLabelScrolled : CONFIG.ctaLabel;
-          if (ctaText.textContent !== want) ctaText.textContent = want;
-        }
+        if (ctaText) ctaText.textContent = scrolled ? CONFIG.ctaLabelScrolled : CONFIG.ctaLabel;
+
         var docH = document.documentElement.scrollHeight - window.innerHeight;
-        var p = docH > 0 ? Math.round((y / docH) * 1000) / 10 : 0;   // 0.1% steps
-        if (bar.__p !== p) { bar.__p = p; bar.style.width = p + "%"; }
+        bar.style.width = (docH > 0 ? (y / docH) * 100 : 0) + "%";
         toTop.classList.toggle("is-visible", y > 400);
         ticking = false;
       });
@@ -481,21 +289,7 @@
       }
     }
     strip();
-    /* Watch cheaply: debounce to once-per-frame (a raw observer here ran a
-       document-wide querySelectorAll on EVERY mutation — a constant main-thread
-       tax that competed with scrolling), scope to <body>, and disconnect once
-       things have settled. The edit bar only injects in Framer's editor context,
-       so continuous observation in production is pure overhead. */
-    try {
-      var scheduled = false;
-      var obs = new MutationObserver(function () {
-        if (scheduled) return;
-        scheduled = true;
-        requestAnimationFrame(function () { scheduled = false; strip(); });
-      });
-      obs.observe(document.body, { childList: true, subtree: true });
-      setTimeout(function () { try { obs.disconnect(); } catch (e) {} }, 30000);
-    } catch (e) {}
+    try { new MutationObserver(strip).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) {}
   }
 
   /* --------------------- relabel hero CTA --------------------------------- */
@@ -546,12 +340,7 @@
     var EASE_OUT = "cubic-bezier(0.7, 0, 0.84, 0)";
     var BASE_SIZE = 32;   // px target; scaled down so the longest phrase fits one line
     var reduce = false;
-    try {
-      // Phones use the cheap opacity fade below (no per-letter blur / 3D perspective),
-      // which was a sustained GPU cost on the hero. Same path as reduced-motion.
-      reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        || window.matchMedia("(max-width: 860px)").matches;
-    } catch (e) {}
+    try { reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
 
     function findSubtext() {
       var ps = document.querySelectorAll("p.framer-text");
@@ -600,15 +389,6 @@
       // (now empty) line to the next width; only after that glide finishes does the
       // next phrase fly in.
       function advanceTo(nextIdx) {
-        // Don't cycle a backgrounded tab — resume when it's visible again.
-        if (document.hidden) {
-          document.addEventListener("visibilitychange", function once() {
-            if (document.hidden) return;
-            document.removeEventListener("visibilitychange", once);
-            advanceTo(nextIdx);
-          });
-          return;
-        }
         state.current = TAGLINE_PHRASES[nextIdx];
         var targetW = widthFor(TAGLINE_PHRASES[nextIdx]);
         var startW = Math.round(slot.getBoundingClientRect().width);
@@ -713,16 +493,7 @@
       remeasure();
       cycle(slot, state);
       if (document.fonts && document.fonts.ready) document.fonts.ready.then(remeasure);
-      /* Width-change only: on phones the URL bar showing/hiding fires resize on
-         every scroll direction change, and each remeasure is ~20 probe
-         measurements with forced reflows. Height-only resizes can't change the
-         fitted width, so skip them. */
-      var rt, lastW = window.innerWidth;
-      window.addEventListener("resize", function () {
-        if (window.innerWidth === lastW) return;
-        lastW = window.innerWidth;
-        clearTimeout(rt); rt = setTimeout(remeasure, 200);
-      });
+      var rt; window.addEventListener("resize", function () { clearTimeout(rt); rt = setTimeout(remeasure, 200); });
     }
 
     // findSubtext only matches the original Framer copy ("AI-powered visual tool"),
@@ -751,13 +522,9 @@
       about.style.display = "none";                 // get rid of the body of text
       var anchor = about.closest('[data-framer-name="Container"]') || about;
       if (!document.querySelector(".ath-heroshot") && anchor.parentNode) {
-        // Phones get a 900px webp (~19KB, ~10x less decode RAM) instead of the
-        // full 2818px hero — a real saving in scroll-time memory. Desktop keeps
-        // the full-res webp; jpg is the universal fallback.
-        var sourceMobile = el("source", { srcset: "assets/hero-app-mobile.webp", type: "image/webp", media: "(max-width: 860px)" });
         var source = el("source", { srcset: "assets/hero-app.webp", type: "image/webp" });
         var img = el("img", { class: "ath-heroshot__img", src: "assets/hero-app.jpg", alt: "Sculptr Studio — 2D consult", decoding: "async" });
-        var pic = el("picture", null, [sourceMobile, source, img]);
+        var pic = el("picture", null, [source, img]);
         var frame = el("div", { class: "ath-heroshot__frame" }, [pic]);
         var wrap = el("div", { class: "ath-heroshot" }, [frame]);
         anchor.parentNode.insertBefore(wrap, anchor);
@@ -859,16 +626,26 @@
 
   // Placeholder brand marks (glyph path in a 0..28 box + wordmark).
   /* Real logos (uploaded to /images). Add more entries here as they arrive. */
+  /* Sized by shape, not by file: wide wordmarks sit at the base height, the
+     squarer stacked lockups get `mid`, portrait crests get `tall`, and a bare
+     wordmark whose glyphs fill the whole box gets `small` — so every mark
+     lands at roughly the same optical weight rather than the same height. */
   var MARQUEE_LOGOS = [
+    { name: "NHS England", img: "/images/nhs-england.png", mid: true },
     { name: "Queen Mary University of London", img: "/images/qmul_logo-removebg-preview.png" },
-    { name: "Imperial College London", img: "/images/avfqfm9mk-removebg-preview.png" },
+    { name: "British College of Aesthetic Medicine", img: "/images/bcam.png" },
     { name: "Barts and The London School of Medicine and Dentistry", img: "/images/Barts_and_The_London_School_of_Medicine_and_Dentistry_coat_of_arms.svg.png", tall: true },
+    { name: "Imperial College London", img: "/images/avfqfm9mk-removebg-preview.png" },
+    { name: "The Royal London Hospital", img: "/images/royal-london.svg", mid: true },
+    { name: "BLAPRAS", img: "/images/blapras.png", tall: true },
+    { name: "ACE", img: "/images/ace.png", small: true },
     { name: "Web Summit", img: "/images/Web_Summit_logo.svg.png" }
   ];
 
   function buildLogoMarquee() {
     function logoNode(l) {
-      var img = el("img", { class: "ath-logo__img" + (l.tall ? " ath-logo__img--tall" : ""),
+      var tier = l.tall ? " ath-logo__img--tall" : l.mid ? " ath-logo__img--mid" : l.small ? " ath-logo__img--small" : "";
+      var img = el("img", { class: "ath-logo__img" + tier,
         src: l.img, alt: l.name, loading: "lazy", draggable: "false" });
       return el("div", { class: "ath-logo" }, [img]);
     }
@@ -877,7 +654,7 @@
       // otherwise the marquee scrolls past the few logos and leaves an empty
       // gap each loop (the "logos disappear" bug). ~8+ items per group fills it.
       var per = MARQUEE_LOGOS.length;
-      var reps = Math.max(2, Math.ceil(8 / per));
+      var reps = Math.max(1, Math.ceil(8 / per));
       var nodes = [];
       for (var r = 0; r < reps; r++) for (var i = 0; i < per; i++) nodes.push(logoNode(MARQUEE_LOGOS[i]));
       return nodes;
@@ -893,22 +670,23 @@
       var track = el("div", { class: "ath-logos__track" }, [g1, g2]);
       var vp = el("div", { class: "ath-logos__viewport" },
         [track, progressiveBlur("left", 8, 0.7), progressiveBlur("right", 8, 0.7)]);
-      var sec = el("div", { class: "ath-logos", "aria-label": "Featured logos" }, [vp]);
+      // Same treatment as the ROI calculator's heading — Satoshi 500, tight
+      // tracking, the 161deg white-to-blue gradient clipped to the glyphs.
+      var head = el("h2", { class: "ath-logos__title", html: "Trusted by" });
+      var sec = el("div", { class: "ath-logos", "aria-label": "Trusted by" }, [head, vp]);
       hero.parentNode.insertBefore(sec, hero.nextSibling);
-      pauseWhenOffscreen(sec);
-    }
-    /* Phones: without this, the marquee's compositor animation keeps running
-       while far offscreen — including exactly while the user scrolls the heavy
-       stats section one viewport below it. Pausing offscreen is invisible: a
-       uniform loop resumes identically when it scrolls back in. */
-    function pauseWhenOffscreen(sec) {
-      try {
-        if (!window.matchMedia || !window.matchMedia("(max-width: 860px)").matches) return;
-        var io = new IntersectionObserver(function (es) {
-          for (var i = 0; i < es.length; i++) sec.classList.toggle("is-off", !es[i].isIntersecting);
-        }, { rootMargin: "80px 0px 80px 0px" });
-        io.observe(sec);
-      } catch (e) {}
+      // The keyframe travels -50% of the track, so a fixed duration means the
+      // belt speeds up every time a logo is added. Set it from the measured
+      // width instead and the pace stays put however long the list gets.
+      // Observed rather than measured once: the logos are lazy, so the group
+      // is still narrow on the first frame and only reaches full width as they
+      // arrive — and the clamp()ed heights change it again on resize.
+      function pace() {
+        var w = g1.getBoundingClientRect().width;
+        if (w > 100) track.style.animationDuration = Math.round(w / 35) + "s";   // ~35px/s
+      }
+      try { new ResizeObserver(pace).observe(g1); } catch (e) { window.addEventListener("resize", pace); }
+      pace();
     }
     var pending = false;
     build();
@@ -928,9 +706,9 @@
      Captions are matched by unique substrings so the (hidden) About copy that
      also mentions "simulations" is never touched. */
   var HOW_CAPS = [
-    { match: "3D facial scanning", title: "Scan",    sub: "A few photos. Any Phone." },
-    { match: "facial editing",     title: "Sculpt",  sub: "Full 3D control.", cls: "ath-cap--nudge" },
-    { match: "visual simulations", title: "Satisfy", sub: "Align expectations. Convert." }
+    { match: "3D facial scanning", num: "01", title: "Scan",    sub: "A few photos. Any Phone." },
+    { match: "facial editing",     num: "02", title: "Sculpt",  sub: "Full 3D control.", cls: "ath-cap--nudge" },
+    { match: "visual simulations", num: "03", title: "Satisfy", sub: "Align expectations. Convert." }
   ];
   function buildHowItWorks() {
     function topLevelOf(node) {
@@ -947,13 +725,15 @@
         for (var j = 0; j < HOW_CAPS.length; j++) {
           if (t.indexOf(HOW_CAPS[j].match) > -1) {
             var ex = HOW_CAPS[j].cls ? " " + HOW_CAPS[j].cls : "";
-            ps[i].innerHTML = '<span class="ath-cap-t' + ex + '">' + HOW_CAPS[j].title +
+            ps[i].innerHTML = '<span class="ath-step-num' + ex + '">' + HOW_CAPS[j].num + "</span>" +
+              '<span class="ath-cap-t' + ex + '">' + HOW_CAPS[j].title +
               '</span><span class="ath-cap-s' + ex + '">' + HOW_CAPS[j].sub + "</span>";
             break;
           }
         }
       }
     }
+
     function applyHeader() {
       if (document.querySelector(".ath-how-head")) return;
       var img = document.querySelector('img[src*="CSV76ZOoyv72"]');
@@ -1077,24 +857,13 @@
       var to = parseFloat(el.getAttribute("data-to")) || 0;
       var from = parseFloat(el.getAttribute("data-from")) || 0;
       var start = null;
-      var n = 0;
-      /* Phones: these numbers are gradient text (background-clip:text), and every
-         text write re-rasters the whole clipped gradient. Doing that 60x/s across
-         several counters right as the section scrolls in was crashing the GPU
-         process. Count in solid colour (.is-counting) at ~20fps and restore the
-         gradient on the final frame — the settled look is identical. */
-      if (PHONE_ANIM) el.classList.add("is-counting");
       function frame(ts) {
         if (start == null) start = ts;
         var t = Math.min(1, (ts - start) / dur);
-        n++;
-        if (t >= 1 || !PHONE_ANIM || n % 3 === 0) {
-          el.textContent = fmt(el, t >= 1 ? to : from + (to - from) * springEase(t));
-        }
-        if (t < 1) RAF0(frame);
-        else if (PHONE_ANIM) el.classList.remove("is-counting");
+        el.textContent = fmt(el, t >= 1 ? to : from + (to - from) * springEase(t));
+        if (t < 1) requestAnimationFrame(frame);
       }
-      RAF0(frame);
+      requestAnimationFrame(frame);
     }
     /* gauge dial: light the first `value` ticks (each tick ~= one minute).
        On scroll it winds from 30 down to 15 — the consultation getting shorter. */
@@ -1111,23 +880,15 @@
         if (start == null) start = ts;
         var t = Math.min(1, (ts - start) / dur);
         setDial(dial, DIAL_FROM + (DIAL_TO - DIAL_FROM) * springEase(t));
-        if (t < 1) RAF0(frame);
+        if (t < 1) requestAnimationFrame(frame);
       }
-      RAF0(frame);
+      requestAnimationFrame(frame);
     }
     function prefersReduced() {
       try { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
       catch (e) { return false; }
     }
-    /* Phones: the reveal used to fire only once the section was 35% into view and
-       then play a 6s staggered sequence — so on a phone it hadn't finished (often
-       hadn't started) by the time you scrolled to it. Fire as it enters and run it
-       ~4x faster with the three groups overlapping. Desktop is unchanged. */
-    var PHONE_ANIM = false;
-    try { PHONE_ANIM = window.matchMedia && window.matchMedia("(max-width: 860px)").matches; } catch (e) {}
-    var DUR = PHONE_ANIM ? 900 : 2000;
-    var STAGGER = PHONE_ANIM ? 240 : 2000;       // gap between the 3 groups
-    var REVEAL_MARGIN = PHONE_ANIM ? "0px 0px -6% 0px" : "0px 0px -35% 0px";
+    var DUR = 2000;
     function reveal(sec) {
       var dial = sec.querySelector(".ath-dial");
       var allCounts = sec.querySelectorAll(".ath-count");
@@ -1135,12 +896,8 @@
       var topCounts = sec.querySelectorAll(".ath-stats__big.ath-count, .ath-stats__bar-val.ath-count");
       var leftCounts = sec.querySelectorAll(".ath-stats__panel--tall:not(.ath-stats__panel--time) .ath-count");
       var rightCounts = sec.querySelectorAll(".ath-stats__panel--time .ath-count");
-      // Reduced motion — and ALL phones: snap everything to final, no animation.
-      // On phones the stats count-up is dropped entirely (the markup already
-      // holds the final values, so the numbers simply read correct from the
-      // start). The ROI calculator's counter is deliberately kept — it is the
-      // one number animation that stays on phones.
-      if (prefersReduced() || PHONE_ANIM) {
+      // reduced motion: snap everything to final, no animation
+      if (prefersReduced()) {
         sec.classList.add("run-top"); sec.classList.add("run-left"); sec.classList.add("run-right");
         if (dial) setDial(dial, DIAL_TO);
         return;
@@ -1157,15 +914,15 @@
           setTimeout(function () {
             sec.classList.add("run-right"); run(rightCounts);    // 3) dial card
             if (dial) animateDial(dial, DUR);
-          }, STAGGER);
-        }, STAGGER);
+          }, DUR);
+        }, DUR);
       }
       try {
         var io = new IntersectionObserver(function (entries) {
           for (var k = 0; k < entries.length; k++) {
             if (entries[k].isIntersecting) { io.disconnect(); go(); break; }
           }
-        }, { threshold: 0, rootMargin: REVEAL_MARGIN }); // desktop: well into view; phone: as it enters
+        }, { threshold: 0, rootMargin: "0px 0px -35% 0px" }); // fire once well into view, not on first peek
         io.observe(sec);
       } catch (e) { go(); }
     }
@@ -1367,13 +1124,6 @@
      content (licensed stock + neutral avatars — NOT real LinkedIn photos);
      swap for real testimonials, traction numbers and team when available. */
   function buildBelowWaitlist() {
-    /* PRODUCTION (main): the testimonials + traction strip is hidden by CSS
-       (.ath-below { display:none !important } — keep this flag in sync with it).
-       Don't build what can't be seen: previously we still injected the section's
-       DOM, its 6 remote <img> tags, 2 document-level listeners and several
-       IntersectionObservers behind the display:none. The website-preview branch
-       sets this to false and gets the full section back. */
-    var BELOW_HIDDEN = true;
     function topLevelOf(node) {
       var root = document.querySelector("[data-framer-root]");
       if (!root) return null;
@@ -1397,20 +1147,16 @@
       return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    /* ---- PLACEHOLDER data ---- */
     var TM = [
-      { q: "This changed everything for me.", a: "Sarah Chen", r: "Designer at Figma",
-        img: "https://images.unsplash.com/photo-1701615004837-40d8573b6652?q=80&w=1480&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
-      { q: "Simply brilliant. Nothing else compares.", a: "Marcus Johnson", r: "Engineer at Vercel",
-        img: "https://plus.unsplash.com/premium_photo-1671656349218-5218444643d8?q=80&w=1287&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
-      { q: "The attention to detail is unmatched.", a: "Elena Rodriguez", r: "Founder at Craft",
-        img: "https://images.unsplash.com/photo-1607746882042-944635dfe10e?q=80&w=2670&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
-      { q: "My patients love seeing the results first.", a: "James Whitfield", r: "Clinic Director",
-        img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=1200&auto=format&fit=crop" },
-      { q: "It paid for itself within a month.", a: "Aisha Bello", r: "Aesthetic Nurse",
-        img: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=1200&auto=format&fit=crop" },
-      { q: "I can't imagine consulting without it.", a: "David Okafor", r: "Lead Practitioner",
-        img: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?q=80&w=1200&auto=format&fit=crop" }
+      { q: "Sculptr changed the consultation completely. Patients see themselves, not someone else\u2019s before and after. Conversion followed almost immediately.",
+        a: "Dr. Ahdie Pooladi, MD", r: "15 years experience in Aesthetic medicine \u2014 Leeds",
+        img: "/images/testimonials/pooladi.webp" },
+      { q: "Before Sculptr I relied on stock photos and hand mirrors, which never really landed. Now the patient sees a simulation of their own face and the conversation shifts from convincing to planning. Our treatment plan sign-off rate has climbed noticeably.",
+        a: "Dr. Karla Diaz, MD", r: "Award winning doctor \u2014 London",
+        img: "/images/testimonials/diaz.webp" },
+      { q: "We already had a 3D scanner in the clinic. Sculptr gives better quality simulations, it is far easier to work with, and all three of our doctors can use it at once. The scanner sits idle now.",
+        a: "Dr. Haidar Hassan, DDS MSc", r: "Clinical Senior Lecturer and Aesthetic Doctor \u2014 London",
+        img: "/images/testimonials/hassan.webp" }
     ];
     var COUNTS = [
       { to: 40, dec: 0, suffix: "+", group: false, label: "clinics onboarded" },
@@ -1446,9 +1192,13 @@
       }
       return '<div class="ath-tm" data-anim="up">'
         + '<div class="ath-tm__quote-wrap">'
-          + '<span class="ath-tm__mark ath-tm__mark--l" aria-hidden="true">“</span>'
-          + '<p class="ath-tm__quote">' + esc(TM[0].q) + '</p>'
-          + '<span class="ath-tm__mark ath-tm__mark--r" aria-hidden="true">”</span>'
+          /* the marks live in a box that hugs the text, not the reserved space,
+             so they follow the quote's length instead of floating off it */
+          + '<div class="ath-tm__quote-box">'
+            + '<span class="ath-tm__mark ath-tm__mark--l" aria-hidden="true">“</span>'
+            + '<p class="ath-tm__quote">' + esc(TM[0].q) + '</p>'
+            + '<span class="ath-tm__mark ath-tm__mark--r" aria-hidden="true">”</span>'
+          + '</div>'
         + '</div>'
         + '<p class="ath-tm__attrib"><span class="ath-tm__name">' + esc(TM[0].a) + '</span><span class="ath-tm__role">' + esc(TM[0].r) + '</span></p>'
         + '<div class="ath-tm__canvas">' + col(0) + col(1) + col(2) + '</div>'
@@ -1510,7 +1260,15 @@
       + '</div>';
     }
 
-    var HTML = tmHTML() + countsHTML();   // team section merged into testimonials (big photo)
+    /* Traction strip (clinics / scans / countries): preview and local only.
+       Opt-IN rather than opt-out, so a new production domain never starts
+       showing unverified numbers by accident — the live site has to be added
+       here deliberately, not merely forgotten. */
+    var SHOW_COUNTS = (function () {
+      var h = location.hostname;
+      return /\.vercel\.app$/.test(h) || h === "localhost" || h === "127.0.0.1" || h === "";
+    })();
+    var HTML = tmHTML() + (SHOW_COUNTS ? countsHTML() : "");
 
     /* ---- CommitsGrid (vanilla port): a GitHub-contributions-style board that
        spells a word; letter cells light up (draw in) on reveal, ambient cells
@@ -1636,9 +1394,9 @@
         node.textContent = fmtN(to * e, dec, group) + suffix;
         node.style.filter = "blur(" + (6 * (1 - e)).toFixed(2) + "px)";
         node.style.transform = "translateY(" + (8 * (1 - e)).toFixed(2) + "px)";
-        if (t < 1) RAF0(frame); else setFinal(node);
+        if (t < 1) requestAnimationFrame(frame); else setFinal(node);
       }
-      RAF0(frame);
+      requestAnimationFrame(frame);
     }
 
     /* Interactions are wired via delegation on `document` (attached ONCE), so
@@ -1674,10 +1432,8 @@
       var tm = cl(card, ".ath-tm"); if (!tm) return;
       tmSetActive(tm, parseInt(card.getAttribute("data-i"), 10) || 0);
     }
-    if (!BELOW_HIDDEN) {
-      document.addEventListener("mouseover", tmFromEvent);   // hover a photo -> highlight + its quote
-      document.addEventListener("click", tmFromEvent);       // tap support (touch / no hover)
-    }
+    document.addEventListener("mouseover", tmFromEvent);   // hover a photo -> highlight + its quote
+    document.addEventListener("click", tmFromEvent);       // tap support (touch / no hover)
 
     function countAll(block) { var ns = block.querySelectorAll(".ath-num"); for (var j = 0; j < ns.length; j++) runCount(ns[j]); }
     function finalAll(block) { var ns = block.querySelectorAll(".ath-num"); for (var j = 0; j < ns.length; j++) setFinal(ns[j]); }
@@ -1696,6 +1452,39 @@
           if (isCounts) onView(block, function () { countAll(block); }, { threshold: 0.55 });
         })(blocks[b]);
       }
+      /* Reserve the tallest quote + attribution. These three run from one line
+         to five, and the swap is a blur-and-replace in place — without this the
+         photos below jump up the page mid-fade every time one is picked. */
+      var tmEl = section.querySelector(".ath-tm");
+      if (tmEl) {
+        var lock = function () {
+          var q = tmEl.querySelector(".ath-tm__quote"), at = tmEl.querySelector(".ath-tm__attrib");
+          var wrap = tmEl.querySelector(".ath-tm__quote-wrap");
+          if (!q || !at || !wrap) return;
+          var keepQ = q.textContent, keepN = at.querySelector(".ath-tm__name").textContent,
+              keepR = at.querySelector(".ath-tm__role").textContent, hq = 0, ha = 0;
+          wrap.style.minHeight = ""; at.style.minHeight = "";
+          for (var i = 0; i < TM.length; i++) {
+            q.textContent = TM[i].q;
+            at.querySelector(".ath-tm__name").textContent = TM[i].a;
+            at.querySelector(".ath-tm__role").textContent = TM[i].r;
+            hq = Math.max(hq, wrap.offsetHeight); ha = Math.max(ha, at.offsetHeight);
+          }
+          q.textContent = keepQ;
+          at.querySelector(".ath-tm__name").textContent = keepN;
+          at.querySelector(".ath-tm__role").textContent = keepR;
+          // On the wrap, not the <p>: the quote marks are anchored to the wrap,
+          // and the text centres inside it, so a short quote sits balanced
+          // rather than pinned to the top of the reserved space.
+          wrap.style.minHeight = hq + "px"; at.style.minHeight = ha + "px";
+        };
+        // Plain resize, not a ResizeObserver on the block itself: lock() changes
+        // that block's height, so observing it would feed itself.
+        lock();
+        setTimeout(lock, 600);   // again once the webfont has settled
+        var lockT = null;
+        window.addEventListener("resize", function () { clearTimeout(lockT); lockT = setTimeout(lock, 150); });
+      }
       // commits grid: draw the letters in on view, then keep the board alive
       var cg = section.querySelector(".ath-cg-wrap");
       if (cg) {
@@ -1708,7 +1497,7 @@
     function build() {
       // Testimonials + traction strip: directly UNDER the 3-steps section, i.e.
       // right before the "Why clinics switch" stats card.
-      if (!BELOW_HIDDEN && !document.querySelector(".ath-below")) {
+      if (!document.querySelector(".ath-below")) {
         var stats = document.querySelector(".ath-stats");
         if (stats && stats.parentNode) {
           var sec = el("section", { class: "ath-below", "aria-label": "What clinicians say and traction" });
@@ -1739,6 +1528,72 @@
     } catch (e) {}
   }
 
+  /* --------- "New features coming" roadmap teaser (stacked display cards) ----
+     Vanilla port of the provided DisplayCards component. A skewed 3-card stack:
+     the lead card (front, colour, on top) announces the next release; the two
+     behind it are greyed with blurred teaser text hinting at what's coming.
+     Hover a card to lift + reveal it. Sits directly under the ROI calculator. */
+  function buildDisplayCards() {
+    function reduced() {
+      try { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; }
+    }
+    function onView(node, cb) {
+      if (!node) return cb();
+      try {
+        var io = new IntersectionObserver(function (es) {
+          for (var i = 0; i < es.length; i++) { if (es[i].isIntersecting) { io.disconnect(); cb(); break; } }
+        }, { threshold: 0, rootMargin: "0px 0px -12% 0px" });
+        io.observe(node);
+      } catch (e) { cb(); }
+    }
+    function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+    var SPARK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.94 15.5A2 2 0 0 0 8.5 14.06l-6.14-1.58a.5.5 0 0 1 0-.97L8.5 9.94A2 2 0 0 0 9.94 8.5l1.58-6.14a.5.5 0 0 1 .97 0L14.06 8.5A2 2 0 0 0 15.5 9.94l6.14 1.58a.5.5 0 0 1 0 .97L15.5 14.06a2 2 0 0 0-1.44 1.44l-1.58 6.14a.5.5 0 0 1-.97 0z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M4 17v2"/><path d="M5 18H3"/></svg>';
+    // back-most first in the DOM so the lead card paints on top
+    var CARDS = [
+      { mod: "ath-card--a", tease: true,  title: "AI treatment planning", desc: "Personalised plan suggestions", date: "Coming soon" },
+      { mod: "ath-card--b", tease: true,  title: "Live collaboration",    desc: "Plan with your whole team",     date: "Coming soon" },
+      { mod: "ath-card--c", tease: false, title: "New features",          desc: "Coming next month",             date: "On the roadmap" }
+    ];
+    function cardHTML(c) {
+      return '<div class="ath-card ' + c.mod + (c.tease ? ' ath-card--tease' : ' ath-card--lead') + '">'
+        + '<div class="ath-card__row"><span class="ath-card__icon">' + SPARK + '</span>'
+        + '<p class="ath-card__title">' + esc(c.title) + '</p></div>'
+        + '<p class="ath-card__desc">' + esc(c.desc) + '</p>'
+        + '<p class="ath-card__date">' + esc(c.date) + '</p>'
+      + '</div>';
+    }
+    var inner = "";
+    for (var i = 0; i < CARDS.length; i++) inner += cardHTML(CARDS[i]);
+    var HTML = '<div class="ath-cards">' + inner + '</div>';
+
+    function build() {
+      if (document.querySelector(".ath-roadmap")) return;
+      // Last of the marketing sections, under Plans & Pricing — what's coming
+      // reads better after what you'd be paying for than before it.
+      var after = document.querySelector(".ath-pr") || document.querySelector(".ath-calc");
+      if (!after || !after.parentNode) return;
+      var sec = el("section", { class: "ath-roadmap", "aria-label": "New features coming soon" });
+      sec.innerHTML = HTML;
+      after.parentNode.insertBefore(sec, after.nextSibling);
+      var wrap = sec.querySelector(".ath-cards");
+      if (reduced()) { if (wrap) wrap.classList.add("is-in"); }
+      else onView(wrap, function () { if (wrap) wrap.classList.add("is-in"); });
+    }
+    var pending = false;
+    build();
+    try {
+      new MutationObserver(function () {
+        if (pending) return; pending = true;
+        requestAnimationFrame(function () { pending = false; build(); });
+      }).observe(document.body, { childList: true, subtree: true });
+    } catch (e) {}
+  }
+
+  /* ----- "All your workflow in one place" folder (opens to reveal features) ---
+     Vanilla port of the provided Framer-Motion FolderInteraction. A clickable
+     folder that opens (on view + on click/tap): the front flap tilts back in 3D
+     and three "files" fan out, each naming a workflow feature. Brand-matched to
+     navy. Sits after the "How it works" steps. */
   /* --------------------- page fade (route transitions) -------------------- */
   /* Smooth white-veil fade used when hopping between pages (home ⇄ request
      access ⇄ the app). The destination page animates itself back in. */
@@ -1781,6 +1636,973 @@
     try {
       var pending = false;
       new MutationObserver(function () { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; wire(); }); })
+        .observe(document.body, { childList: true, subtree: true });
+    } catch (e) {}
+  }
+
+  /* --------------------------- plans & pricing ----------------------------- */
+  /* The app's Plans & Pricing section (components/subscription/pricing-section
+     .tsx + lib/subscription/plans.ts), copied onto the site above the FAQ.
+     Copy, prices, feature lists and the "Title: detail" chevron convention are
+     verbatim from the app's plan data; styling in athli-enhance.css is the
+     resolved form of the app's own classes. Difference from the app: the CTAs
+     go to /request-access instead of Stripe checkout / the sales modal. */
+  function buildPricing() {
+    function topLevelOf(node) {
+      var root = document.querySelector("[data-framer-root]");
+      if (!root) return null;
+      var n = node;
+      while (n && n.parentElement && n.parentElement !== root) n = n.parentElement;
+      return (n && n.parentElement === root) ? n : null;
+    }
+
+    var YEARLY_DISCOUNT = 0.2;
+    var PLANS = [
+      {
+        id: "essential", name: "Essential", monthlyPrice: 149, buttonText: "Choose Essential",
+        features: [
+          { text: "1 practitioner", icon: "seats" },
+          { text: "150 simulations / mo", icon: "visualisations" },
+          { text: "50 GB scan storage", icon: "storage" }
+        ],
+        includes: { heading: "Essential includes:", items: [
+          { text: "3D facial reconstruction and editing from a single scan", hero: true },
+          "Patient records: medical history intake, consultation notes and treatment logging per visit",
+          "Mark-up tools: draw, annotate and plan directly on the 3D face",
+          { text: "3D comparison across visits", hero: true },
+          { text: "Facial analysis: facial thirds, lower-face thirds, facial fifths", hero: true },
+          "Chat support"
+        ] }
+      },
+      {
+        id: "clinic", name: "Clinic+", monthlyPrice: 249, popular: true, buttonText: "Choose Clinic+",
+        features: [
+          { text: "Up to 5 practitioners", icon: "seats" },
+          { text: "300 simulations / mo", icon: "visualisations" },
+          { text: "100 GB scan storage", icon: "storage" }
+        ],
+        includes: { heading: "Everything in Essential, plus:", items: [
+          { text: "Full simulation editing suite: sculpt, adjust and refine every result", hero: true },
+          { text: "AI consultation scribe: ambient recording, auto-generated consultation summaries, treatment plans and follow-up notes, custom templates, editable and exportable in one click", hero: true },
+          { text: "Skin analysis, 15 metrics: skin type, wrinkles, spots, texture, pores, firmness, eye bags, droopy upper eyelid, droopy lower eyelid, acne, dark circles, redness, radiance, moisture, oiliness", hero: true },
+          { text: "Injection mapping: product, units and depth plotted on the face, saved to the patient record", hero: true },
+          "Before-and-after photo storage with timeline view",
+          "Consults inbox and aftercare follow-ups",
+          { text: "Patient portal: patients view their plan, simulations and results, etc.", hero: true },
+          "Shared clinic library: treatment templates and pricing presets",
+          "Data export and reporting",
+          "Priority support"
+        ] }
+      },
+      {
+        id: "signature", name: "Signature", wordmark: "images/signature-wordmark.png",
+        tagline: "Your Personal Private App", monthlyPrice: 499, startingAt: true,
+        buttonText: "Talk to Sales",
+        features: [
+          { text: "Unlimited practitioners", icon: "seats" },
+          { text: "Unlimited simulations", icon: "visualisations" },
+          { text: "Unlimited scan storage", icon: "storage" }
+        ],
+        includes: { heading: "Everything in Clinic+, plus:", items: [
+          { text: "Your own branded patient app, iOS and Android", hero: true },
+          "Multi-location management with per-site reporting",
+          { text: "Custom branding across app, portal and patient documents", hero: true },
+          "Two-way patient messaging: appointment reminders, aftercare check-ins, recall campaigns",
+          { text: "Offers, packages and loyalty programmes", hero: true },
+          "Role-based permissions and team management",
+          "Group-wide analytics: revenue, conversion and treatment mix by site",
+          "API and integrations with your existing clinic software"
+        ] }
+      }
+    ];
+    var FOOTNOTE = "All prices include VAT. Cancel anytime. Extra simulations available on any plan.";
+
+    function yearlyPriceFor(p) { return Math.round(p.monthlyPrice * 12 * (1 - YEARLY_DISCOUNT)); }
+    function priceFor(p, interval) { return interval === "yearly" ? yearlyPriceFor(p) : p.monthlyPrice; }
+    function gbp(n) { return "£" + n.toLocaleString("en-GB"); }
+    function savingPercent() {
+      var m = 0, y = 0;
+      for (var i = 0; i < PLANS.length; i++) { m += PLANS[i].monthlyPrice * 12; y += yearlyPriceFor(PLANS[i]); }
+      return m <= 0 ? 0 : Math.round((1 - y / m) * 100);
+    }
+
+    /* lucide: users / scan-face / database, and check-check for the list */
+    var ICONS = {
+      seats: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+      visualisations: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>',
+      storage: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>'
+    };
+    var ICON_CHECKCHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>';
+    var ICON_CHEVRON = '<svg class="ath-pr__chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+
+    function esc(t) { return String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+    /* "Title: detail" -> title visible, detail behind a chevron (as the app). */
+    function includeItem(raw, featured) {
+      var text = typeof raw === "string" ? raw : raw.text;
+      var hero = typeof raw === "string" ? false : !!raw.hero;
+      var split = text.indexOf(":");
+      var title = split > 0 ? text.slice(0, split) : text;
+      var detail = split > 0 ? text.slice(split + 1).trim() : null;
+      var markCls = hero
+        ? (featured ? "ath-pr__mark ath-pr__mark--hero-navy" : "ath-pr__mark ath-pr__mark--hero")
+        : (featured ? "ath-pr__mark ath-pr__mark--ring-navy" : "ath-pr__mark ath-pr__mark--ring");
+      var titleCls = "ath-pr__it-title" + (hero ? " is-hero" : "") + (featured ? " on-navy" : "");
+      var sheen = hero ? (" ath-pr__sheen" + (featured ? " ath-pr__sheen--on-navy" : "")) : "";
+      var body = detail
+        ? '<button type="button" class="ath-pr__it-btn ' + titleCls + '" aria-expanded="false">'
+            + '<span class="ath-pr__it-text' + sheen + '">' + esc(title) + "</span>" + ICON_CHEVRON
+          + "</button>"
+          + '<div class="ath-pr__it-reveal"><div><p class="ath-pr__it-detail' + (featured ? " on-navy" : "") + '">' + esc(detail) + "</p></div></div>"
+        : '<span class="ath-pr__it-plain ' + titleCls + '"><span class="ath-pr__it-text' + sheen + '">' + esc(title) + "</span></span>";
+      return '<li class="ath-pr__item"><span class="' + markCls + '">' + ICON_CHECKCHECK + "</span>"
+        + '<div class="ath-pr__it-body">' + body + "</div></li>";
+    }
+
+    function planCard(p) {
+      var featured = !!p.popular, feats = "", items = "";
+      for (var i = 0; i < p.features.length; i++) {
+        feats += '<li class="ath-pr__feat">' + ICONS[p.features[i].icon]
+          + "<span>" + esc(p.features[i].text) + "</span></li>";
+      }
+      for (var j = 0; j < p.includes.items.length; j++) items += includeItem(p.includes.items[j], featured);
+
+      var title = p.wordmark
+        ? '<span class="ath-pr__wordmark" role="img" aria-label="' + esc(p.name) + '">'
+            + '<span class="ath-pr__wordmark-ink" aria-hidden="true" style="-webkit-mask-image:url(&quot;' + p.wordmark + '&quot;);mask-image:url(&quot;' + p.wordmark + '&quot;)"></span></span>'
+        : '<h3 class="ath-pr__name">' + esc(p.name) + "</h3>";
+
+      return '<div class="ath-pr__card' + (featured ? " is-featured" : "") + '" data-plan="' + p.id + '">'
+        + '<div class="ath-pr__card-body">'
+          + '<div class="ath-pr__topgap">'
+            + (featured ? '<span class="ath-pr__popular">Most popular</span>' : '<span class="ath-pr__popular-spacer" aria-hidden="true"></span>')
+            + title
+            + '<div class="ath-pr__price-row">'
+              + (p.startingAt ? '<span class="ath-pr__starting">Starting at</span>' : "")
+              + '<span class="ath-pr__price" data-monthly="' + gbp(p.monthlyPrice) + '" data-yearly="' + gbp(yearlyPriceFor(p)) + '">' + gbp(p.monthlyPrice) + "</span>"
+              + '<span class="ath-pr__per">/<span class="ath-pr__per-word">month</span></span>'
+            + "</div>"
+            + (p.tagline ? '<p class="ath-pr__tagline">' + esc(p.tagline) + "</p>" : "")
+          + "</div>"
+          + '<ul class="ath-pr__feats">' + feats + "</ul>"
+          + '<div class="ath-pr__includes">'
+            + '<h4 class="ath-pr__inc-head">' + esc(p.includes.heading) + "</h4>"
+            + '<ul class="ath-pr__items">' + items + "</ul>"
+          + "</div>"
+        + "</div>"
+        + '<div class="ath-pr__rule"></div>'
+        + '<div class="ath-pr__footer">'
+          + '<div class="glass-button-wrap ' + (featured ? "glass-button--haze" : "glass-button--haze-light") + ' ath-pr__cta">'
+          + '<a class="glass-button" href="/request-access"><span class="glass-button-text">' + esc(p.buttonText) + "</span></a>"
+          + '<div class="glass-button-shadow"></div></div>'
+        + "</div>"
+      + "</div>";
+    }
+
+    var cards = "";
+    for (var k = 0; k < PLANS.length; k++) cards += planCard(PLANS[k]);
+
+    var HTML = '<div class="ath-pr__inner">'
+      + '<div class="ath-pr__head">'
+        + "<div>"
+        + '<h2 class="ath-pr__title">Plans &amp; Pricing</h2>'
+        + '<p class="ath-pr__sub">Every plan includes the 3D consultation studio.</p>'
+        + "</div>"
+        + '<fieldset class="switcher" data-previous="1">'
+          + '<legend class="switcher__legend">Choose billing period</legend>'
+          + '<label class="switcher__option"><input class="switcher__input" type="radio" name="ath-billing-period" value="monthly" checked>Monthly</label>'
+          + '<label class="switcher__option"><input class="switcher__input" type="radio" name="ath-billing-period" value="yearly">Yearly'
+          + '<span class="switcher__badge">Save ' + savingPercent() + '%</span></label>'
+        + "</fieldset>"
+      + "</div>"
+      + '<div class="ath-pr__panel">' + cards + "</div>"
+      + '<p class="ath-pr__footnote">' + FOOTNOTE + "</p>"
+      + "</div>";
+
+    function wire(sec) {
+      /* chevron rows */
+      sec.addEventListener("click", function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest(".ath-pr__it-btn") : null;
+        if (!btn) return;
+        var open = btn.getAttribute("aria-expanded") === "true";
+        btn.setAttribute("aria-expanded", open ? "false" : "true");
+        var rev = btn.nextElementSibling;
+        if (rev) rev.style.gridTemplateRows = open ? "0fr" : "1fr";
+      });
+      /* monthly <-> yearly */
+      var fs = sec.querySelector(".switcher");
+      var inputs = sec.querySelectorAll(".switcher__input");
+      for (var i = 0; i < inputs.length; i++) {
+        inputs[i].addEventListener("change", function () {
+          var yearly = this.value === "yearly";
+          fs.setAttribute("data-previous", yearly ? "2" : "1");
+          var prices = sec.querySelectorAll(".ath-pr__price");
+          for (var j = 0; j < prices.length; j++) {
+            prices[j].textContent = prices[j].getAttribute(yearly ? "data-yearly" : "data-monthly");
+          }
+          var words = sec.querySelectorAll(".ath-pr__per-word");
+          for (var w = 0; w < words.length; w++) words[w].textContent = yearly ? "year" : "month";
+        });
+      }
+      /* every CTA goes to the request-access page, with the veil fade */
+      var ctas = sec.querySelectorAll(".ath-pr__cta .glass-button");
+      for (var c = 0; c < ctas.length; c++) {
+        ctas[c].addEventListener("click", function (e) {
+          e.preventDefault(); e.stopPropagation();
+          if (window.athNavigateWithFade) window.athNavigateWithFade("/request-access");
+          else window.location.href = "/request-access";
+        }, true);
+      }
+    }
+
+    function build() {
+      if (document.querySelector(".ath-pr")) return;
+      var faq = document.getElementById("faq");
+      var anchor = faq ? topLevelOf(faq) : null;
+      if (!anchor || !anchor.parentNode) return;
+      var sec = el("section", { class: "ath-pr", "aria-label": "Plans & Pricing" });
+      sec.innerHTML = HTML;
+      anchor.parentNode.insertBefore(sec, anchor);   // right above the FAQ
+      wire(sec);
+    }
+    build();
+    var pending = false;
+    try {
+      new MutationObserver(function () { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; build(); }); })
+        .observe(document.body, { childList: true, subtree: true });
+    } catch (e) {}
+  }
+
+  /* ------------------------------ features --------------------------------- */
+  /* One panel, feature list down the left, showcase on the right: a screenshot
+     of the app with the description under it. Rows are a real tablist, so
+     arrow keys work and the panel is announced properly.
+
+     Two features have no screenshot yet; they render a branded plate with the
+     feature's icon instead of a broken frame, and adding the image is a
+     one-line change (drop the file in and set `img`). */  var FEATURES = [
+    { id: "sculpt", name: "Live Sculpt", imgs: ["live-sculpt-1"],
+      body: "56 anatomy controls across nose, brow, cheeks, chin, jaw and lips. Morph the full 3D face in real time, in front of the patient, until the result is exactly what they want." },
+    { id: "variations", name: "Variations &amp; Compare",
+      imgs: ["variations-1", "variations-2", "variations-3", "variations-4", "variations-5", "variations-6"],
+      body: "Save unlimited named variations per scan and hold them side by side. Single, Split and Reveal views put the original and the simulation on the same face, one slider apart." },
+    { id: "analysis", name: "Facial Analysis", imgs: ["analysis-1", "analysis-2"],
+      body: "Facial thirds and fifths calibrated on the model with live percentages. Objective proportional language for the recommendation, easier to accept and easier to price against." },
+    { id: "planning", name: "Facial Planning", imgs: ["planning-1"],
+      body: "Draw, annotate and measure directly on the 3D face, with real millimetre measurements saved to the model. Patients understand a line drawn on their own jaw instantly." },
+    { id: "injection", name: "Injection Mapping", imgs: ["injection-1"],
+      body: "Product, units and site plotted on the face and saved to the record per visit. Results become reproducible, and any practitioner can pick up exactly where another left off." },
+    { id: "scribe", name: "AI Scribe", imgs: [],
+      icon: '<path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/>',
+      body: "Ambient recording writes consultation summaries, treatment plans and follow-ups automatically. No more 9pm paperwork." },
+    { id: "record", name: "The Living Record", imgs: ["record-1", "record-2"],
+      body: "The patient record lives on the face. Medical history, consultation notes, treatment plans, consent and a before-and-after photo timeline all attach to the 3D scan itself, not to a separate system with a second login." }
+  ];
+  var FEAT_DWELL = 4600;   // ms each screenshot holds before the next slides in
+
+  function buildFeatures() {
+    function topLevelOf(node) {
+      var root = document.querySelector("[data-framer-root]");
+      if (!root) return null;
+      var n = node;
+      while (n && n.parentElement && n.parentElement !== root) n = n.parentElement;
+      return (n && n.parentElement === root) ? n : null;
+    }
+    function reduced() { try { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } }
+
+    /* Lead the description with its first sentence — that sentence is the claim
+       in every one of these, and the rest is the supporting detail. */
+    function bodyHTML(text) {
+      var m = text.match(/^([\s\S]*?[.!?])\s+([\s\S]+)$/);
+      if (!m) return '<span class="ath-feat__lead">' + text + "</span>";
+      return '<span class="ath-feat__lead">' + m[1] + "</span> " + m[2];
+    }
+
+    var rows = "", panes = "";
+    for (var i = 0; i < FEATURES.length; i++) {
+      var f = FEATURES[i], on = i === 0;
+      rows += '<button type="button" class="ath-feat__row' + (on ? " is-active" : "") + '" role="tab"'
+        + ' id="ath-feat-tab-' + f.id + '" aria-controls="ath-feat-pane-' + f.id + '"'
+        + ' aria-selected="' + (on ? "true" : "false") + '" tabindex="' + (on ? "0" : "-1") + '">'
+        + '<span class="ath-feat__row-name">' + f.name + "</span>"
+        + '<svg class="ath-feat__row-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>'
+        + "</button>";
+
+      var media;
+      if (f.imgs.length) {
+        var slides = "", inds = "";
+        for (var s = 0; s < f.imgs.length; s++) {
+          slides += '<img class="ath-feat__img' + (s === 0 ? " is-on" : "") + '" src="/images/features/' + f.imgs[s] + '.webp"'
+            + ' alt="' + f.name.replace(/&amp;/g, "and") + ' in the Sculptr app" loading="lazy" decoding="async" draggable="false">';
+          inds += '<button type="button" class="ath-feat__ind' + (s === 0 ? " is-on" : "") + '" data-slide="' + s + '"'
+            + ' aria-label="Screenshot ' + (s + 1) + " of " + f.imgs.length + '"><span class="ath-feat__ind-fill"></span></button>';
+        }
+        media = '<div class="ath-feat__media">' + slides + "</div>"
+          + (f.imgs.length > 1 ? '<div class="ath-feat__inds" role="group" aria-label="Screenshots">' + inds + "</div>" : "");
+      } else {
+        // No screenshot: the copy carries the pane, with the icon kept as a mark.
+        media = '<div class="ath-feat__plate"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + f.icon + "</svg></div>";
+      }
+      panes += '<div class="ath-feat__pane' + (on ? " is-active" : "") + (f.imgs.length ? "" : " ath-feat__pane--copy") + '" role="tabpanel"'
+        + ' id="ath-feat-pane-' + f.id + '" aria-labelledby="ath-feat-tab-' + f.id + '">'
+        + media
+        + '<p class="ath-feat__body">' + bodyHTML(f.body) + "</p>"
+        + "</div>";
+    }
+
+    var HTML = '<div class="ath-feat__inner">'
+      + '<div class="ath-feat__head">'
+        + '<h2 class="ath-feat__title">Everything the consultation needs</h2>'
+        + '<p class="ath-feat__sub">One record, one face, one login. Pick a feature to see it.</p>'
+      + "</div>"
+      + '<div class="ath-feat__card">'
+        + '<div class="ath-feat__panel">'
+          + '<div class="ath-feat__list" role="tablist" aria-label="Features" aria-orientation="vertical">' + rows + "</div>"
+          + '<div class="ath-feat__show">' + panes + "</div>"
+        + "</div>"
+      + "</div>"
+    + "</div>";
+
+    function wire(sec) {
+      var tabs = sec.querySelectorAll(".ath-feat__row");
+      var timer = null, visible = true, hovering = false;
+
+      /* Slide runner for the active pane. One timer for the section, not one
+         per pane, so hidden panes cost nothing. */
+      function stopSlides() { if (timer) { clearTimeout(timer); timer = null; } }
+      function runSlides(pane) {
+        stopSlides();
+        var imgs = pane.querySelectorAll(".ath-feat__img");
+        var inds = pane.querySelectorAll(".ath-feat__ind");
+        if (imgs.length < 2) return;
+        var at = 0;
+        for (var i = 0; i < imgs.length; i++) if (imgs[i].classList.contains("is-on")) at = i;
+
+        function paint(next, animate) {
+          for (var j = 0; j < imgs.length; j++) imgs[j].classList.toggle("is-on", j === next);
+          for (var k = 0; k < inds.length; k++) {
+            var on = k === next;
+            inds[k].classList.toggle("is-on", on);
+            var fill = inds[k].querySelector(".ath-feat__ind-fill");
+            // Reset with the transition off, then run it — otherwise the bar
+            // eases backwards from full to empty on every change.
+            fill.style.transition = "none";
+            fill.style.width = on && animate ? "0%" : (on ? "100%" : "0%");
+            if (on && animate) {
+              void fill.offsetWidth;
+              fill.style.transition = "width " + FEAT_DWELL + "ms linear";
+              fill.style.width = "100%";
+            }
+          }
+          at = next;
+        }
+        function tick() {
+          timer = setTimeout(function () {
+            if (!visible || hovering || document.hidden) { tick(); return; }   // hold, don't skip
+            paint((at + 1) % imgs.length, true);
+            tick();
+          }, FEAT_DWELL);
+        }
+        paint(at, !reduced());
+        if (!reduced()) tick();
+
+        for (var m = 0; m < inds.length; m++) {
+          (function (idx) {
+            inds[idx].onclick = function () { paint(idx, !reduced()); if (!reduced()) tick(); };
+          })(m);
+        }
+      }
+
+      function select(idx) {
+        for (var t = 0; t < tabs.length; t++) {
+          var on = t === idx;
+          tabs[t].classList.toggle("is-active", on);
+          tabs[t].setAttribute("aria-selected", on ? "true" : "false");
+          tabs[t].setAttribute("tabindex", on ? "0" : "-1");
+          var pane = sec.querySelector("#ath-feat-pane-" + FEATURES[t].id);
+          if (!pane) continue;
+          // Panes stay stacked in one grid cell rather than being display:none'd,
+          // so the card keeps one height across features and the swap is a real
+          // cross-fade instead of a collapse-and-reopen.
+          pane.classList.toggle("is-active", on);
+          if (on) runSlides(pane);
+        }
+      }
+      for (var i = 0; i < tabs.length; i++) {
+        (function (idx) {
+          tabs[idx].addEventListener("click", function () { select(idx); });
+          tabs[idx].addEventListener("keydown", function (e) {
+            var next = null;
+            if (e.key === "ArrowDown" || e.key === "ArrowRight") next = (idx + 1) % tabs.length;
+            else if (e.key === "ArrowUp" || e.key === "ArrowLeft") next = (idx - 1 + tabs.length) % tabs.length;
+            else if (e.key === "Home") next = 0;
+            else if (e.key === "End") next = tabs.length - 1;
+            if (next === null) return;
+            e.preventDefault();
+            select(next);
+            tabs[next].focus();
+          });
+        })(i);
+      }
+
+      var show = sec.querySelector(".ath-feat__show");
+      show.addEventListener("pointerenter", function () { hovering = true; });
+      show.addEventListener("pointerleave", function () { hovering = false; });
+      try {
+        new IntersectionObserver(function (es) { visible = es[0].isIntersecting; }, { threshold: 0.1 }).observe(sec);
+      } catch (e) {}
+      runSlides(sec.querySelector(".ath-feat__pane.is-active"));
+    }
+
+    function build() {
+      if (document.querySelector(".ath-feat")) return;
+      var faq = document.getElementById("faq");
+      // Straight after the testimonials: product content together, with the
+      // proof sections (stats, calculator, roadmap) below it.
+      var anchor = document.querySelector(".ath-stats") || document.querySelector(".ath-pr") || (faq ? topLevelOf(faq) : null);
+      if (!anchor || !anchor.parentNode) return;
+      var sec = el("section", { class: "ath-feat", "aria-label": "Features" });
+      sec.innerHTML = HTML;
+      anchor.parentNode.insertBefore(sec, anchor);
+      wire(sec);
+    }
+    build();
+    var pending = false;
+    try {
+      new MutationObserver(function () { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; build(); }); })
+        .observe(document.body, { childList: true, subtree: true });
+    } catch (e) {}
+  }
+
+  /* ---------------------------- studio demo -------------------------------- */
+  /* A cut-down copy of the app's editor studio, running for real on the page.
+     Same head model, same scene set-up as components/3d-viewer/ModelViewer.tsx
+     (fov 39 at z 3.5, ACES filmic tone mapping, the studio's four-light rig)
+     and nine of the actual sculpt controls from components/panels/SliderPanel
+     .tsx — labels and morph target names verbatim. Sliders write morph target
+     influences the way the app does (value / 100), so nothing here is faked.
+
+     Weight is the whole point: three.js and the model are a lazy fetch that
+     only starts once the section scrolls into view, and the render loop idles
+     whenever the section is off-screen, the tab is hidden or the camera and
+     sliders are at rest. */
+  function buildStudioDemo() {
+    var THREE_SRC = "/assets/ath-three.js";
+    var MODEL_SRC = "/assets/demo-head.glb";
+
+    /* Straight out of SLIDER_CATEGORIES — category names, slider labels and
+       morph targets exactly as the studio defines them. */
+    var CATEGORIES = [
+      { name: "Main Nose Features", sliders: [
+        { label: "Nose Bulbous", targets: ["Nose Bulbous"] },
+        { label: "Nose Depth", targets: ["Nose Depth"] },
+        { label: "Nose Droop", targets: ["Nose Droop"] },
+        { label: "Nose Height", targets: ["Nose Height"] },
+        { label: "Nose Relative Depth", targets: ["Nose Relative Depth"] },
+        { label: "Nose Scale", targets: ["Nose Scale"] },
+        { label: "Nose Upturn", targets: ["Nose Upturn"] },
+        { label: "Nose Width", targets: ["Nose Width"] }
+      ] }
+    ];
+
+    /* The worked edit the demo opens on — the same shape the app stores in a
+       session's sliderValues (morph target name -> -100..100). The last four
+       have no slider in this cut-down panel; they're part of the face you
+       arrive at, not something to drive here. "Reset all" zeroes everything as
+       it does in the studio, and "Hold to compare" shows the raw scan. */
+    var PRESET = {
+      "Nose Depth": -31,
+      "Nose Height": -8,
+      "Nose Relative Depth": 24,
+      "Nose Scale": -35,
+      "Nose Upturn": 73,
+      "Nose Width": -3,
+      "Nose Ridge Curve": -32,
+      "browOuterUpLeft": 30,
+      "browOuterUpRight": 30,
+      "jawForward": 33
+    };
+
+    function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+    function reduced() { try { return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } }
+    function frugal() {
+      // Metered / slow connections: make the ~1.2 MB fetch a deliberate tap.
+      try {
+        var c = navigator.connection;
+        if (!c) return false;
+        return !!c.saveData || /^(slow-)?2g$/.test(c.effectiveType || "");
+      } catch (e) { return false; }
+    }
+    function hasWebGL() {
+      try {
+        var c = document.createElement("canvas");
+        return !!(window.WebGLRenderingContext && (c.getContext("webgl") || c.getContext("experimental-webgl")));
+      } catch (e) { return false; }
+    }
+    function topLevelOf(node) {
+      var root = document.querySelector("[data-framer-root]");
+      if (!root) return null;
+      var n = node;
+      while (n && n.parentElement && n.parentElement !== root) n = n.parentElement;
+      return (n && n.parentElement === root) ? n : null;
+    }
+
+    /* Panel chrome, collapsibles and sliders are the resolved form of the
+       studio's own components — app/studio/components/ToolPanel.tsx and
+       bits.tsx (Collapsible, CountBadge, FlowSlider) — down to the token
+       values: 3px #e2eaf8 track, centre-origin cyan→azure→navy fill with the
+       zero tick, 16px st-slider-thumb, the azure "edited" dot with its
+       per-slider hover reset, and the st-pill actions. */
+    var CHEVRON = '<svg class="st-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+    var SLIDERS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+      + '<path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/>'
+      + '<path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></svg>';
+
+    /* FlowSlider. The visible track/fill/tick/thumb are painted elements —
+       that's the only way to get the studio's centre-origin fill — over a
+       transparent native range input, which keeps the drag, the arrow keys and
+       the screen-reader semantics the platform already gets right. */
+    function sliderHTML(s, id) {
+      return '<div class="st-slider" data-slider="' + id + '" style="--pct:0.5;--fl:50%;--fw:0%">'
+        + '<div class="st-slider__row">'
+          + '<span class="st-slider__name"><span class="st-slider__dot" aria-hidden="true"></span>'
+          + '<span class="st-slider__label">' + esc(s.label) + "</span></span>"
+          + '<span class="st-slider__right">'
+            + '<button type="button" class="st-slider__reset" tabindex="-1" aria-label="Reset ' + esc(s.label) + '">reset</button>'
+            + '<span class="st-slider__val">0</span>'
+          + "</span>"
+        + "</div>"
+        + '<div class="st-slider__ctl">'
+          + '<div class="st-slider__track"><span class="st-slider__tick" aria-hidden="true"></span>'
+          + '<span class="st-slider__fill" aria-hidden="true"></span></div>'
+          + '<span class="st-slider__thumb" aria-hidden="true"></span>'
+          + '<input class="st-slider__input" id="' + id + '" type="range" min="-100" max="100" step="1" value="0" aria-label="' + esc(s.label) + '">'
+        + "</div>"
+      + "</div>";
+    }
+    function categoryHTML(cat, ci) {
+      var rows = "";
+      for (var i = 0; i < cat.sliders.length; i++) rows += sliderHTML(cat.sliders[i], "ath-sl-" + ci + "-" + i);
+      var open = ci === 0;
+      return '<div class="st-collapsible">'
+        + '<button type="button" class="st-collapsible__btn" aria-expanded="' + (open ? "true" : "false") + '">'
+          + '<span class="st-collapsible__title"><span>' + esc(cat.name) + "</span>"
+          + '<span class="st-count" data-count-for="' + ci + '" hidden>0</span></span>'
+          + CHEVRON
+        + "</button>"
+        + '<div class="st-collapsible__body" style="grid-template-rows:' + (open ? "1fr" : "0fr") + '"><div><div class="st-collapsible__inner">' + rows + "</div></div></div>"
+        + "</div>";
+    }
+
+    var cats = "";
+    for (var c0 = 0; c0 < CATEGORIES.length; c0++) cats += categoryHTML(CATEGORIES[c0], c0);
+
+    var HTML = '<div class="ath-demo__inner">'
+      + '<div class="ath-demo__head">'
+        + "<div>"
+        + '<h2 class="ath-demo__title">Try the studio</h2>'
+        + '<p class="ath-demo__sub">The real editor, running right here on the page. Drag to rotate the scan, move a slider, and watch the face change as you go.</p>'
+        + "</div>"
+      + "</div>"
+      + '<div class="ath-demo__panel">'
+        + '<div class="ath-demo__stage">'
+          + '<div class="ath-demo__glow" aria-hidden="true"></div>'
+          + '<canvas class="ath-demo__canvas"></canvas>'
+          + '<div class="ath-demo__state"><span class="ath-demo__spinner" aria-hidden="true"></span><span class="ath-demo__state-text">Loading the 3D scan…</span></div>'
+          + '<button type="button" class="ath-demo__load">Load the 3D demo</button>'
+          + '<span class="ath-demo__hint">Drag to rotate</span>'
+        + "</div>"
+        + '<div class="ath-demo__tools">'
+          + '<div class="st-toolhead">'
+            + '<div class="st-toolhead__id">'
+              + '<span class="st-toolhead__icon st-inset">' + SLIDERS_ICON + "</span>"
+              + "<div>"
+                + '<h3 class="st-toolhead__title">Sculpt</h3>'
+                + '<p class="st-toolhead__sub">Morph the anatomy in real time</p>'
+              + "</div>"
+            + "</div>"
+            + '<button type="button" class="st-pill ath-demo__reset">Reset all</button>'
+          + "</div>"
+          + '<hr class="st-hairline">'
+          + '<div class="ath-demo__cats st-scroll">' + cats + "</div>"
+          + '<div class="ath-demo__tools-foot">'
+            + '<button type="button" class="st-pill ath-demo__compare">Hold to compare</button>'
+          + "</div>"
+        + "</div>"
+      + "</div>"
+      + '<div class="ath-demo__foot">'
+        + '<p class="ath-demo__note">One of the studio’s eight control groups, opened on a worked case. The full editor adds the rest of the control set, your own patient scans, before-and-after comparison and treatment planning.</p>'
+        + '<div class="glass-button-wrap glass-button--haze-light ath-demo__cta">'
+          + '<a class="glass-button" href="/request-access"><span class="glass-button-text">Request Access</span></a>'
+          + '<div class="glass-button-shadow"></div>'
+        + "</div>"
+      + "</div>"
+      + "</div>";
+
+    /* --------------------------- the three.js scene ------------------------ */
+    var loadingThree = null;   // shared promise-ish: one <script> for the page
+    function ensureThree(cb, fail) {
+      if (window.ATH3D) return cb();
+      if (loadingThree) { loadingThree.push({ ok: cb, no: fail }); return; }
+      loadingThree = [{ ok: cb, no: fail }];
+      var s = document.createElement("script");
+      s.src = THREE_SRC;
+      s.async = true;
+      s.onload = function () { var q = loadingThree; loadingThree = null; for (var i = 0; i < q.length; i++) q[i].ok(); };
+      s.onerror = function () { var q = loadingThree; loadingThree = null; for (var i = 0; i < q.length; i++) q[i].no(); };
+      document.head.appendChild(s);
+    }
+
+    var live = null;   // the running instance, so a rebuild can tear it down
+
+    function startScene(sec) {
+      var stage = sec.querySelector(".ath-demo__stage");
+      var canvas = sec.querySelector(".ath-demo__canvas");
+      var stateEl = sec.querySelector(".ath-demo__state");
+      var stateText = sec.querySelector(".ath-demo__state-text");
+      var T = window.ATH3D;
+
+      var renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.toneMapping = T.ACESFilmicToneMapping;
+
+      var scene = new T.Scene();
+      var camera = new T.PerspectiveCamera(22, 1, 0.1, 100);
+      camera.position.set(0, 0, 3.5);
+
+      // The studio's rig, at the studio's default intensity (8).
+      var s = 8;
+      scene.add(new T.AmbientLight(0xffffff, s * 0.7));
+      function dir(x, y, z, i) { var l = new T.DirectionalLight(0xffffff, s * i); l.position.set(x, y, z); scene.add(l); return l; }
+      dir(0, 0, 4, 1.8);      // key — azimuth 0, elevation 0, radius 4
+      dir(0, -2, 1, 0.4);     // fill from below, softens under the chin and nose
+      dir(-2, 1, -3, 0.35);   // rim, for depth separation
+
+      var controls = new T.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.1;
+      controls.enablePan = false;          // head stays put, same as the studio
+      // Zoom is off and touch drags are horizontal-only: on a page people are
+      // scrolling through, the viewer must never eat the wheel or a swipe.
+      controls.enableZoom = false;
+      renderer.domElement.style.touchAction = "pan-y";
+      /* Idle motion sweeps between the two side profiles instead of orbiting:
+         a full turn would put the back of the head on screen, which is the one
+         angle of a face scan nobody wants to see. Driven off a sine so it eases
+         to a stop at each profile and turns back rather than snapping. */
+      var AUTO_AMP = Math.PI / 2;      // ±90° — profile to profile
+      var AUTO_HALF = 30000;           // ms from one profile to the other
+      var autoSpin = !reduced();
+      var autoElapsed = 0, autoLast = 0;
+      controls.addEventListener("start", function () { autoSpin = false; stage.classList.add("is-touched"); });
+
+      var meshes = [];        // every primitive carrying the morph dictionary
+      var values = {};        // morph target name -> -100..100
+      var comparing = false;
+      var dirty = true;
+      var visible = false;
+      var disposed = false;
+      var raf = 0;
+      var headPts = [];       // sparse sample of the head, for framing
+      var headMid = null;     // its centre — the orbit target
+
+      /* The studio renders into a full-height stage, so it can hard-code the
+         camera at z 3.5; here the stage is whatever shape the section's grid
+         gives it. Solve the distance instead: for every sampled head point,
+         the smallest distance that keeps it inside the frame is
+         (its depth) + (its offset) / (margin · tan(half-fov)), so the fit is
+         the largest of those. Neck and shoulders sit below the sample and fall
+         out of frame, which is the framing the studio ends up with too. */
+      var MARGIN = 0.88;
+      var ZOOM_OUT = 1.10;   // 10% wider than the tightest fit
+      var RISE = 0.08;       // lift the head by 8% of the frame height
+      function fitCamera(initial) {
+        if (!headPts.length) return;
+        var dir = initial
+          ? new T.Vector3(0, 0, 1)
+          : camera.position.clone().sub(controls.target).normalize();
+        var up = new T.Vector3(0, 1, 0);
+        var right = new T.Vector3().crossVectors(up, dir).normalize();
+        if (!isFinite(right.x) || right.lengthSq() < 1e-6) right.set(1, 0, 0);
+        var camUp = new T.Vector3().crossVectors(dir, right).normalize();
+
+        var tanV = Math.tan(camera.fov * Math.PI / 360);
+        var tanH = tanV * camera.aspect;
+        var v = new T.Vector3();
+        var dist = 0;
+        for (var i = 0; i < headPts.length; i++) {
+          v.copy(headPts[i]).sub(headMid);
+          var depth = v.dot(dir);
+          dist = Math.max(dist,
+            depth + Math.abs(v.dot(right)) / (MARGIN * tanH),
+            depth + Math.abs(v.dot(camUp)) / (MARGIN * tanV));
+        }
+        dist *= ZOOM_OUT;
+        // Sitting the head dead-centre reads low, because the neck and
+        // shoulders below it carry visual weight the frame doesn't show.
+        // Dropping the target lifts the face by RISE of the frame height,
+        // which the zoom-out has already made room for.
+        var frameH = 2 * dist * tanV;
+        var target = headMid.clone();
+        target.y -= frameH * RISE;
+        controls.target.copy(target);
+        camera.position.copy(target).add(dir.multiplyScalar(dist));
+        controls.minDistance = dist * 0.8;
+        controls.maxDistance = dist * 1.35;
+        controls.update();
+        dirty = true;
+      }
+
+      function applyMorphs() {
+        for (var m = 0; m < meshes.length; m++) {
+          var mesh = meshes[m];
+          var infl = mesh.morphTargetInfluences;
+          var dict = mesh.morphTargetDictionary;
+          for (var i = 0; i < infl.length; i++) infl[i] = 0;
+          if (comparing) continue;
+          for (var name in values) {
+            var idx = dict[name];
+            if (idx !== undefined) infl[idx] = values[name] / 100;
+          }
+        }
+        dirty = true;
+      }
+
+      function resize() {
+        var w = stage.clientWidth, h = stage.clientHeight;
+        if (!w || !h) return;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+        fitCamera(false);
+        dirty = true;
+      }
+
+      /* Place the camera on the sweep. Radius is read back from the live camera
+         rather than cached, so a resize refit is picked up on the next frame;
+         the camera stays level with the target, which is where fitCamera puts
+         it. Writing the position before controls.update() is fine — update()
+         derives its spherical from the current position, then writes it back. */
+      function autoPlace(now) {
+        // Accumulate only the time the sweep was actually on screen, so
+        // scrolling away and back resumes where it left off instead of
+        // snapping to the front. The clamp stops a long pause leaping.
+        if (autoLast) autoElapsed += Math.min(now - autoLast, 100);
+        autoLast = now;
+        var az = AUTO_AMP * Math.sin((autoElapsed / AUTO_HALF) * Math.PI);
+        var t = controls.target;
+        var r = Math.hypot(camera.position.x - t.x, camera.position.z - t.z);
+        camera.position.set(t.x + r * Math.sin(az), t.y, t.z + r * Math.cos(az));
+        camera.lookAt(t);
+        dirty = true;
+      }
+
+      function loop() {
+        if (disposed) return;
+        raf = requestAnimationFrame(loop);
+        if (!visible || document.hidden) { autoLast = 0; return; }   // pause the sweep's clock, don't reset it
+        if (autoSpin && headPts.length) autoPlace(performance.now());
+        var moved = controls.update();
+        if (!moved && !dirty) return;
+        dirty = false;
+        renderer.render(scene, camera);
+      }
+
+      function fail(msg) {
+        stateEl.classList.add("is-error");
+        if (stateText) stateText.textContent = msg;
+      }
+
+      var loader = new T.GLTFLoader();
+      loader.setMeshoptDecoder(T.MeshoptDecoder);
+      loader.load(MODEL_SRC, function (gltf) {
+        if (disposed) return;
+        gltf.scene.traverse(function (o) {
+          if (o.isMesh && o.morphTargetDictionary && o.morphTargetInfluences) meshes.push(o);
+        });
+        scene.add(gltf.scene);
+        // Sample the top 62% of the model — head and jaw, no torso — every
+        // 32nd vertex, which is plenty to bound it and costs nothing.
+        var box = new T.Box3().setFromObject(gltf.scene);
+        var cut = box.max.y - (box.max.y - box.min.y) * 0.62;
+        gltf.scene.updateWorldMatrix(true, true);
+        gltf.scene.traverse(function (o) {
+          if (!o.isMesh || !o.geometry || !o.geometry.attributes.position) return;
+          var pos = o.geometry.attributes.position;
+          for (var i = 0; i < pos.count; i += 32) {
+            var p = new T.Vector3(pos.getX(i), pos.getY(i), pos.getZ(i)).applyMatrix4(o.matrixWorld);
+            if (p.y >= cut) headPts.push(p);
+          }
+        });
+        var hbox = new T.Box3().setFromPoints(headPts.length ? headPts : [box.min, box.max]);
+        headMid = hbox.getCenter(new T.Vector3());
+        applyMorphs();
+        resize();
+        fitCamera(true);
+        stage.classList.add("is-ready");
+        dirty = true;
+      }, null, function () { fail("Couldn’t load the 3D scan. Try refreshing the page."); });
+
+      /* ---- controls ---- */
+      var ranges = sec.querySelectorAll(".st-slider__input");
+      function catIndex(input) { return +input.id.split("-")[2]; }
+      function targetsFor(input) {
+        var ids = input.id.split("-");             // ath-sl-<cat>-<slider>
+        var cat = CATEGORIES[+ids[2]];
+        return cat ? cat.sliders[+ids[3]].targets : [];
+      }
+      /* Centre-origin fill, exactly as FlowSlider computes it: the bar grows
+         out of the zero tick rather than up from the left end. */
+      function paint(input) {
+        var v = +input.value;
+        var pct = (v + 100) / 200;
+        var wrap = input.closest(".st-slider");
+        wrap.style.setProperty("--pct", String(pct));
+        wrap.style.setProperty("--fl", (Math.min(pct, 0.5) * 100) + "%");
+        wrap.style.setProperty("--fw", (Math.abs(pct - 0.5) * 100) + "%");
+        wrap.querySelector(".st-slider__val").textContent = String(v);
+        wrap.classList.toggle("is-modified", Math.round(v) !== 0);
+      }
+      // CountBadge — how many controls in each category are off zero.
+      function paintCounts() {
+        for (var c = 0; c < CATEGORIES.length; c++) {
+          var n = 0;
+          for (var i = 0; i < ranges.length; i++) if (catIndex(ranges[i]) === c && +ranges[i].value !== 0) n++;
+          var badge = sec.querySelector('[data-count-for="' + c + '"]');
+          if (badge) { badge.textContent = String(n); badge.hidden = n === 0; }
+        }
+      }
+      function setSlider(input, v) {
+        input.value = v;
+        var ts = targetsFor(input);
+        for (var t = 0; t < ts.length; t++) values[ts[t]] = +v;
+        paint(input);
+        paintCounts();
+        applyMorphs();
+      }
+      // Open on the worked edit. The whole PRESET goes to the mesh, including
+      // the targets this panel has no slider for; sliders that do exist take
+      // their opening position from it.
+      for (var k in PRESET) values[k] = PRESET[k];
+      for (var r = 0; r < ranges.length; r++) {
+        (function (input) {
+          input.addEventListener("input", function () { setSlider(input, +input.value); });
+          var one = input.closest(".st-slider").querySelector(".st-slider__reset");
+          one.addEventListener("click", function () { setSlider(input, 0); });
+          var ts = targetsFor(input);
+          for (var t = 0; t < ts.length; t++) {
+            if (values[ts[t]] === undefined) continue;
+            input.value = values[ts[t]];
+            break;
+          }
+          paint(input);
+        })(ranges[r]);
+      }
+      paintCounts();
+
+      var reset = sec.querySelector(".ath-demo__reset");
+      if (reset) reset.addEventListener("click", function () {
+        values = {};
+        for (var i = 0; i < ranges.length; i++) { ranges[i].value = 0; paint(ranges[i]); }
+        paintCounts();
+        applyMorphs();
+      });
+
+      // Press-and-hold the compare button to drop back to the untouched scan.
+      var compare = sec.querySelector(".ath-demo__compare");
+      if (compare) {
+        var hold = function (on) { return function (e) { if (e.cancelable) e.preventDefault(); comparing = on; compare.classList.toggle("is-held", on); applyMorphs(); }; };
+        compare.addEventListener("pointerdown", hold(true));
+        compare.addEventListener("pointerup", hold(false));
+        compare.addEventListener("pointerleave", hold(false));
+        compare.addEventListener("pointercancel", hold(false));
+        compare.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); comparing = true; compare.classList.add("is-held"); applyMorphs(); } });
+        compare.addEventListener("keyup", function (e) { if (e.key === "Enter" || e.key === " ") { comparing = false; compare.classList.remove("is-held"); applyMorphs(); } });
+      }
+
+      /* ---- lifecycle ---- */
+      try {
+        new ResizeObserver(resize).observe(stage);
+      } catch (e) { window.addEventListener("resize", resize); }
+      try {
+        new IntersectionObserver(function (es) { visible = es[0].isIntersecting; }, { threshold: 0 }).observe(sec);
+      } catch (e) { visible = true; }
+      document.addEventListener("visibilitychange", function () { dirty = true; });
+
+      resize();
+      loop();
+
+      return { dispose: function () { disposed = true; cancelAnimationFrame(raf); controls.dispose(); renderer.dispose(); } };
+    }
+
+    function boot(sec) {
+      if (sec.getAttribute("data-ath-booted") === "1") return;
+      sec.setAttribute("data-ath-booted", "1");
+      var stateText = sec.querySelector(".ath-demo__state-text");
+      sec.querySelector(".ath-demo__stage").classList.add("is-loading");
+      ensureThree(function () {
+        if (stateText) stateText.textContent = "Loading the 3D scan…";
+        live = startScene(sec);
+      }, function () {
+        sec.querySelector(".ath-demo__state").classList.add("is-error");
+        if (stateText) stateText.textContent = "Couldn’t load the 3D viewer. Try refreshing the page.";
+      });
+    }
+
+    /* --------------------------------- build ------------------------------- */
+    function build() {
+      if (document.querySelector(".ath-demo")) return;
+      if (!hasWebGL()) return;
+      // Above Plans & Pricing; if pricing hasn't landed yet, above the FAQ —
+      // pricing then slots in between and the order comes out the same.
+      var faq = document.getElementById("faq");
+      // After the features box (built first), before the stats card.
+      var anchor = document.querySelector(".ath-stats") || document.querySelector(".ath-pr") || (faq ? topLevelOf(faq) : null);
+      if (!anchor || !anchor.parentNode) return;
+
+      if (live) { live.dispose(); live = null; }
+
+      var sec = el("section", { class: "ath-demo", "aria-label": "Try the studio" });
+      sec.innerHTML = HTML;
+      anchor.parentNode.insertBefore(sec, anchor);
+
+      // Accordion — same collapse trick as the pricing feature rows.
+      sec.addEventListener("click", function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest(".st-collapsible__btn") : null;
+        if (!btn) return;
+        var open = btn.getAttribute("aria-expanded") === "true";
+        btn.setAttribute("aria-expanded", open ? "false" : "true");
+        var body = btn.nextElementSibling;
+        if (body) body.style.gridTemplateRows = open ? "0fr" : "1fr";
+      });
+
+      // The CTA joins the request flow with the same veil fade as everything else.
+      var cta = sec.querySelector(".ath-demo__cta .glass-button");
+      if (cta) cta.addEventListener("click", function (e) {
+        e.preventDefault(); e.stopPropagation();
+        if (window.athNavigateWithFade) window.athNavigateWithFade("/request-access");
+        else window.location.href = "/request-access";
+      }, true);
+
+      var loadBtn = sec.querySelector(".ath-demo__load");
+      if (frugal()) {
+        // Metered connection: wait for an explicit tap before spending the data.
+        sec.querySelector(".ath-demo__stage").classList.add("is-deferred");
+        loadBtn.addEventListener("click", function () { sec.querySelector(".ath-demo__stage").classList.remove("is-deferred"); boot(sec); });
+      } else {
+        try {
+          var io = new IntersectionObserver(function (es) {
+            for (var i = 0; i < es.length; i++) if (es[i].isIntersecting) { io.disconnect(); boot(sec); break; }
+          }, { rootMargin: "300px 0px" });
+          io.observe(sec);
+        } catch (e) { boot(sec); }
+      }
+    }
+
+    build();
+    var pending = false;
+    try {
+      new MutationObserver(function () { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; build(); }); })
         .observe(document.body, { childList: true, subtree: true });
     } catch (e) {}
   }
@@ -1836,6 +2658,12 @@
     buildStatsSection();
     buildCalculator();
     buildBelowWaitlist();
+    buildPricing();
+    // after buildPricing: the roadmap anchors off .ath-pr, and each builder
+    // early-returns once its section exists, so it has to find it first time.
+    buildDisplayCards();
+    buildFeatures();
+    buildStudioDemo();
     var built = buildNav();
     buildFooter();
     buildHeroBadge();

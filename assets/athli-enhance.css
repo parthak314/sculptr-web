@@ -171,7 +171,9 @@ html.dark .ath-theme-toggle .ath-icon-moon { display: none; }
 /* =============================================================================
    MOBILE NAV
    ========================================================================== */
-@media (max-width: 860px) {
+/* 1000, not 860: six links are 481px of centred nav, and the absolutely
+   centred list starts overlapping the 200px wordmark below about 950px. */
+@media (max-width: 1000px) {
   .ath-nav__links { display: none; }
   .ath-nav__actions .ath-btn--primary,
   .ath-nav__actions .ath-nav-cta,
@@ -207,7 +209,7 @@ html.dark .ath-theme-toggle .ath-icon-moon { display: none; }
   .ath-mobile-panel .ath-btn--primary { flex: 1; }
 }
 .ath-mobile-panel { display: none; }
-@media (max-width: 860px) { .ath-mobile-panel { display: flex; } }
+@media (max-width: 1000px) { .ath-mobile-panel { display: flex; } }
 
 /* =============================================================================
    FOOTER
@@ -221,6 +223,55 @@ html.dark .ath-theme-toggle .ath-icon-moon { display: none; }
   backdrop-filter: blur(8px);
 }
 .ath-footer__inner { max-width: 1024px; margin: 0 auto; text-align: center; }
+
+/* ---- trust row -------------------------------------------------------- */
+/* Reassurance, not a feature: it opens the footer but sits under everything
+   else in weight — smaller than the nav links, and quieter in colour. The row
+   is a plain wrapping flex list, so removing any single item just closes the
+   gap. */
+.ath-trust {
+  padding-bottom: 22px;
+  margin-bottom: 26px;
+  border-bottom: 1px solid var(--ath-footer-border);
+}
+.ath-trust__row {
+  display: flex; flex-wrap: wrap;
+  align-items: center; justify-content: center;
+  gap: 12px 30px;
+  margin: 0; padding: 0; list-style: none;
+}
+.ath-trust__item {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 12.5px; line-height: 1.2; white-space: nowrap;
+  color: var(--ath-fg-muted);
+}
+.ath-trust__icon { width: 14px; height: 14px; flex: none; opacity: 0.72; }
+/* The badge is the one item with no label, so it carries a touch more height
+   to hold its own against three lines of text. */
+.ath-trust__badge { height: 26px; width: auto; display: block; opacity: 0.66; }
+.ath-trust__note {
+  max-width: 64ch;
+  margin: 16px auto 0;
+  font-size: 11.5px; line-height: 1.6;
+  color: rgba(15, 57, 139, 0.45);
+}
+/* Dark theme: the badge is baked in the site navy, so flip it to a light
+   silhouette rather than leaving navy ink on a near-black footer. */
+html.dark .ath-trust__badge { filter: brightness(0) invert(1); opacity: 0.5; }
+html.dark .ath-trust__note { color: rgba(200, 215, 245, 0.45); }
+
+@media (max-width: 700px) {
+  .ath-trust { padding-bottom: 18px; margin-bottom: 22px; }
+  .ath-trust__row { gap: 11px 22px; }
+  .ath-trust__item { font-size: 12px; }
+  /* Narrow enough that the row wraps anyway: give the badge its own line so it
+     reads as the header of the group rather than being marooned beside
+     whichever claim happened to fit. Scoped to the badge, so pulling any of
+     the other three still just closes the gap. */
+  .ath-trust__item--badge { flex-basis: 100%; justify-content: center; margin-bottom: 2px; }
+  .ath-trust__badge { height: 23px; }
+  .ath-trust__note { font-size: 11px; margin-top: 14px; }
+}
 .ath-footer__logo { display: inline-flex; }
 .ath-footer__logo img { height: 46.875px; width: auto; filter: drop-shadow(0 0 10px rgba(0,136,255,0.28)); }
 .ath-footer__links {
@@ -616,12 +667,33 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
 .ath-logos {
   width: 100%;
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
   box-sizing: border-box;
   padding: 0 24px;
   margin-top: 100px;            /* 100px below the hero screenshot */
   position: relative;
   z-index: 1;
+}
+/* The ROI calculator's heading treatment, at belt scale. */
+.ath-logos__title {
+  margin: 0 0 calc(26px - 0.18em);
+  font-family: "Satoshi", "Satoshi Placeholder", sans-serif;
+  font-weight: 500;
+  font-size: clamp(22px, 2.8vw, 30px);
+  letter-spacing: -0.02em;
+  line-height: 1.12;
+  /* background-clip:text paints the gradient only inside the element's box,
+     and at line-height 1.12 that box stops above the descenders — so the tail
+     of the "y" got no gradient and read as sliced off. Give the box the extra
+     room and take it back off the margin. (The ROI heading this is copied from
+     has the same ceiling; its copy just has no descenders to expose it.) */
+  padding-bottom: 0.18em;
+  text-align: center;
+  background-image: linear-gradient(161deg, rgb(255, 255, 255) -42%, rgb(21, 96, 189) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
 }
 .ath-logos__viewport {
   position: relative;
@@ -638,7 +710,6 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   animation: ath-marquee 40s linear infinite;
 }
 .ath-logos:hover .ath-logos__track { animation-play-state: paused; }
-.ath-logos.is-off .ath-logos__track { animation-play-state: paused; }  /* offscreen (phone JS): compositor idle */
 .ath-logos__group {
   display: flex;
   align-items: center;
@@ -652,6 +723,8 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   user-select: none; -webkit-user-drag: none;   /* full original colours */
 }
 .ath-logo__img--tall { height: clamp(42px, 5.2vw, 58px); }   /* portrait crest needs more height */
+.ath-logo__img--mid  { height: clamp(34px, 4.4vw, 50px); }   /* squarer stacked lockups sit between the two */
+.ath-logo__img--small { height: clamp(20px, 2.4vw, 27px); }  /* bare wordmark: its caps ARE the box, so it needs less */
 @keyframes ath-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
 /* ProgressiveBlur port: stacked backdrop-blur layers, each masked to a band */
@@ -665,6 +738,8 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   .ath-logos { margin-top: 64px; }
   .ath-logo__img { height: 26px; }
   .ath-logo__img--tall { height: 38px; }
+  .ath-logo__img--mid { height: 32px; }
+  .ath-logo__img--small { height: 19px; }
   .ath-pblur { width: 90px; }
 }
 
@@ -710,6 +785,15 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   color: transparent;
 }
 /* Caption lines under each icon — all solid brand #1560bd. */
+/* Step number above each title — quieter than the title it belongs to, so it
+   marks the sequence without becoming the loudest thing in the column. */
+.ath-step-num {
+  display: block;
+  font-size: 11px; font-weight: 700; line-height: 1;
+  letter-spacing: 0.22em; font-variant-numeric: tabular-nums;
+  color: rgba(21, 96, 189, 0.42);
+  margin-bottom: 9px;
+}
 .ath-cap-t { display: block; font-weight: 600; color: rgb(21, 96, 189); }
 .ath-cap-s { display: block; font-weight: 400; color: rgb(21, 96, 189); margin-top: 3px; }
 .ath-cap--nudge { transform: translateX(-6px); }   /* nudge the middle (Sculpt) caption 6px left */
@@ -725,7 +809,7 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
 .ath-stats {
   width: 100%;
   box-sizing: border-box;
-  padding: 88px 24px;
+  padding: clamp(72px, 9.5vw, 124px) 24px;
   display: flex;
   justify-content: center;
   background: transparent;            /* section/background untouched — plain white */
@@ -903,7 +987,9 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   width: 100%; box-sizing: border-box;
   display: flex; flex-direction: column; align-items: center;
   gap: clamp(56px, 9vw, 120px);
-  padding: clamp(56px, 9vw, 120px) 24px;
+  /* less at the top than the bottom: the three steps above end in captions, so
+     the old symmetrical 120px read as a hole between the two */
+  padding: clamp(40px, 5.4vw, 76px) 24px clamp(56px, 9vw, 120px);
   background: transparent;            /* plain white page, like the other sections */
 }
 /* scroll-reveal for each block */
@@ -936,14 +1022,18 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
 .ath-tm__card.is-active { transform: translateY(-6px) scale(1.04); box-shadow: 0 26px 46px -22px rgba(15,57,139,0.55); }
 .ath-tm__card.is-active .ath-tm__card-img { filter: grayscale(0) brightness(1); }
 
-.ath-tm__quote-wrap { position: relative; padding: 0 28px; }
+.ath-tm__quote-wrap { padding: 0 28px; display: flex; align-items: center; justify-content: center; }
+/* The wrap reserves the tallest quote; this box is only as tall as the quote
+   actually showing, and the marks hang off IT — so they sit against the first
+   and last line whatever the length, instead of pinned to the reserved box. */
+.ath-tm__quote-box { position: relative; width: fit-content; max-width: 560px; }
 .ath-tm__mark {
   position: absolute; font-family: Georgia, "Times New Roman", serif;
   font-size: 86px; line-height: 1; color: rgba(15,57,139,0.10);
   user-select: none; pointer-events: none;
 }
-.ath-tm__mark--l { left: -8px; top: -34px; }
-.ath-tm__mark--r { right: -8px; bottom: -60px; }
+.ath-tm__mark--l { left: -18px; bottom: 100%; margin-bottom: -58px; }
+.ath-tm__mark--r { right: -18px; top: 100%; margin-top: -16px; }
 .ath-tm__quote {
   margin: 0; font-family:"Satoshi","Satoshi Placeholder",sans-serif;
   font-weight: 300; font-size: clamp(22px, 3.4vw, 32px); line-height: 1.42;
@@ -951,12 +1041,24 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   transition: opacity .4s ease-out, filter .4s ease-out, transform .4s ease-out;
 }
 .ath-tm.is-anim .ath-tm__quote { opacity: 0; filter: blur(5px); transform: scale(0.98); }
+/* Fade the marks with the quote: they move when the quote's length changes, and
+   that move should happen while nothing is on screen to see it. */
+.ath-tm__mark { transition: opacity .4s ease-out; }
+.ath-tm.is-anim .ath-tm__mark { opacity: 0; }
 .ath-tm__attrib { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 5px; transition: opacity .4s ease-out, filter .4s ease-out, transform .4s ease-out; }
 /* same hide treatment + timing as the quote so the name swaps while it's blurred
    out (not visibly mid-change) */
 .ath-tm.is-anim .ath-tm__attrib { opacity: 0; filter: blur(5px); transform: scale(0.98); }
 .ath-tm__name { font-family:"Satoshi","Satoshi Placeholder",sans-serif; font-size: 16px; font-weight: 600; color: rgb(15,57,139); }
-.ath-tm__role { font-family:"Satoshi","Satoshi Placeholder",sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(15,57,139,0.5); }
+/* These credentials run long — "Clinical Senior Lecturer and Aesthetic Doctor
+   — London" is 55 characters — so the tracking comes down from 0.2em and the
+   line is given a measure to wrap inside rather than running the full width. */
+.ath-tm__role {
+  font-family:"Satoshi","Satoshi Placeholder",sans-serif;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.13em; line-height: 1.55;
+  text-transform: uppercase; color: rgba(15,57,139,0.5);
+  max-width: 34rem; text-align: center; text-wrap: balance;
+}
 
 /* ---------------------------- traction strip ----------------------- */
 .ath-counts { width: min(900px, 92vw); display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: clamp(22px, 5vw, 64px); }
@@ -1103,7 +1205,9 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
 .ath-calc {
   position: relative; z-index: 1;       /* above Framer's fixed bg layer */
   width: 100%; box-sizing: border-box;
-  padding: 8px 24px clamp(72px, 10vw, 104px);
+  /* 8px was pairing the calculator tight under the stats card; with the other
+     boxed sections now ~190px apart it was the one that read as cramped. */
+  padding: clamp(32px, 4vw, 56px) 24px clamp(72px, 10vw, 104px);
   display: flex; justify-content: center; background: transparent;
 }
 .ath-calc__card {
@@ -1163,18 +1267,6 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   .ath-calc__grid { grid-template-columns: 1fr; gap: 22px; }
 }
 
-/* PRODUCTION (main) ONLY: hide the testimonials + traction strip (kept in
-   the code, just hidden via CSS). The website-preview branch keeps them. */
-.ath-below { display: none !important; }
-
-/* #experience and #case-study are removed by JS on every breakpoint (see
-   buildHeroShot / removeCaseStudy) — but the JS only runs after parse, and
-   Framer re-renders can flash them back before the observers re-hide them.
-   Pin them off in CSS: same end state, guaranteed from first paint. This also
-   permanently silences the ~90 infinite "shine" mask animations and ~60
-   blurred Glow chips that ship inside #experience in the SSR HTML. */
-#experience, #case-study { display: none !important; }
-
 /* =============================================================================
    MOBILE OPTIMISATION  (layout order + GPU/perf)
    ========================================================================== */
@@ -1205,110 +1297,531 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   .ath-cg-wrap.is-lit .ath-cg-cell.is-on { animation: ath-cg-pop .5s ease var(--d, 0s) both; }
 }
 
+/* ---------------------- roadmap: stacked "coming soon" cards -------------- */
+/* Vanilla port of the DisplayCards component (preview only). */
+.ath-roadmap {
+  position: relative; z-index: 1;
+  width: 100%; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center;
+  /* the down-cascading cards hang toward the FAQ, so the bottom needs +112px to
+     leave the same dead space below (to the FAQ) as above (to the calculator) */
+  padding: clamp(64px, 9vw, 120px) 24px calc(clamp(64px, 9vw, 120px) + 112px);
+  min-height: 340px;
+  overflow-x: clip;   /* the skewed cascade can extend past the viewport on small screens */
+  background: transparent;
+}
+.ath-cards {
+  display: grid; grid-template-areas: "stack"; place-items: center;
+  opacity: 0; transition: opacity .7s ease;
+}
+.ath-cards.is-in { opacity: 1; }
+.ath-card {
+  grid-area: stack; position: relative;
+  display: flex; flex-direction: column; justify-content: space-between;
+  width: 28.6rem; height: 11.7rem; box-sizing: border-box;
+  padding: 20px 24px; border-radius: 18px;
+  border: 2px solid rgba(15,57,139,0.12);
+  background: rgba(240,245,252,0.72);
+  -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px);
+  box-shadow: 0 26px 57px -31px rgba(15,57,139,0.5);
+  user-select: none;
+  transition: transform .7s cubic-bezier(0.22,1,0.36,1), border-color .5s ease, filter .7s ease, box-shadow .5s ease;
+  will-change: transform;
+}
+.ath-card::after {
+  content: ""; position: absolute; right: -5px; top: -5%;
+  height: 110%; width: 23.4rem; border-radius: inherit;
+  background: linear-gradient(to left, #ffffff 8%, rgba(255,255,255,0));
+  pointer-events: none;
+}
+.ath-card__row { display: flex; align-items: center; gap: 10px; }
+.ath-card__icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 35px; height: 35px; border-radius: 999px;
+  background: #0f398b; color: #9cc4ff; flex-shrink: 0;
+}
+.ath-card__icon svg { width: 20px; height: 20px; }
+.ath-card__title { margin: 0; font-family:"Satoshi","Satoshi Placeholder",sans-serif; font-size: 22px; font-weight: 600; color: #1560bd; }
+.ath-card__desc  { margin: 0; font-family:"Satoshi","Satoshi Placeholder",sans-serif; font-size: 21px; font-weight: 400; color: rgb(15,57,139); white-space: nowrap; }
+.ath-card__date  { margin: 0; font-family:"Satoshi","Satoshi Placeholder",sans-serif; font-size: 16px; font-weight: 500; color: rgba(15,57,139,0.75); }
+/* cascade + skew; lead (c) is last in DOM so it paints on top */
+.ath-card--a { transform: skewY(-8deg); }
+.ath-card--a:hover { transform: translateY(-52px) skewY(-8deg); }
+.ath-card--b { transform: translate(62px, 52px) skewY(-8deg); }
+.ath-card--b:hover { transform: translate(62px, -5px) skewY(-8deg); }
+.ath-card--c { transform: translate(125px, 104px) skewY(-8deg); }
+.ath-card--c:hover { transform: translate(125px, 52px) skewY(-8deg); }
+.ath-card--lead:hover { border-color: rgba(21,96,189,0.35); }
+/* keep the lead card's message crisp above its right-edge fade */
+.ath-card--lead .ath-card__row,
+.ath-card--lead .ath-card__desc,
+.ath-card--lead .ath-card__date { position: relative; z-index: 2; }
+/* teaser cards behind: greyed, dimmed, blurred hint text */
+.ath-card--tease { filter: grayscale(1); }
+.ath-card--tease:hover { filter: grayscale(0); }
+.ath-card--tease::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  background: rgba(248,250,253,0.5); outline: 1px solid rgba(15,57,139,0.10);
+  opacity: 1; transition: opacity .7s ease; z-index: 3; pointer-events: none;
+}
+.ath-card--tease:hover::before { opacity: 0; }
+.ath-card--tease .ath-card__title,
+.ath-card--tease .ath-card__desc,
+.ath-card--tease .ath-card__date { filter: blur(5px); }
+@media (prefers-reduced-motion: reduce) { .ath-card, .ath-card--tease::before { transition: none; } }
+/* mobile: shrink the cluster so the cascade doesn't overflow the viewport */
+@media (max-width: 640px) {
+  .ath-cards { transform: scale(0.5) translateX(-65px); }   /* shrink + re-centre the right-heavy cascade */
+  .ath-roadmap { min-height: 300px; padding: clamp(40px, 8vw, 72px) 10px; }
+}
+
+/* ---------------------- page-transition veil ------------------------------ */
+/* White overlay faded in before cross-page navigation (home ⇄ request access
+   ⇄ app sign-up); the destination page animates itself back in. */
+.ath-veil {
+  position: fixed; inset: 0; z-index: 4000;
+  background: #ffffff; opacity: 0; pointer-events: none;
+  transition: opacity .32s ease;
+}
+.ath-veil.is-on { opacity: 1; pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) { .ath-veil { transition: none; } }
+
+
 /* =============================================================================
-   MOBILE OPTIMISATION — FRAMER CORE (GPU memory + scroll paint)
-   The block above only tames our own `.ath-*` layer; the rules below tame the
-   Framer-generated core, which is where the phone crashes-while-scrolling come
-   from (measured: 162 compositor layers, 79 blurred elements at 393px). All
-   phone-only; desktop is untouched.
+   PLANS & PRICING — the app's pricing section (components/subscription/
+   pricing-section.tsx), copied onto the site above the FAQ. Every value is the
+   RESOLVED form of the app's own tokens/classes (--s1-bg/--s2-bg, .glass-1,
+   .switcher, .plan-wordmark, .plan-check--hero, .plan-hero-title sheen,
+   glass-button--haze/--haze-light), since the static site can't read those
+   custom properties. Not a redesign.
    ========================================================================== */
+.ath-pr {
+  position: relative; z-index: 1;
+  width: 100%; box-sizing: border-box;
+  padding: clamp(72px, 9.5vw, 124px) 0;
+  background: transparent;
+  font-family: "Satoshi", "Satoshi Placeholder", sans-serif;
+  color: #0f398b;
+}
+.ath-pr__inner { width: min(1080px, 94vw); margin: 0 auto; padding: 0 0 64px; box-sizing: border-box; }
+
+/* header row */
+.ath-pr__head {
+  display: flex; flex-direction: column; align-items: flex-start;
+  justify-content: space-between; padding-bottom: 16px; gap: 20px;
+}
+/* padding-bottom, not 0: side-by-side the header's text column ends flush with
+   the panel below it, so the subtitle sat directly on the panel's top edge. */
+@media (min-width: 640px) { .ath-pr__head { flex-direction: row; align-items: center; padding-bottom: 44px; } }
+/* Same treatment as the other section titles. fit-content so the gradient maps
+   to the glyphs, padding-bottom so the "g" in "Pricing" isn't clipped by it. */
+.ath-pr__title {
+  margin: 0 0 14px;
+  width: fit-content;
+  font-weight: 500;
+  font-size: clamp(28px, 4.2vw, 44px); letter-spacing: -0.02em; line-height: 1.12;
+  padding-bottom: 0.18em;
+  background-image: linear-gradient(161deg, rgb(255, 255, 255) -42%, rgb(21, 96, 189) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.ath-pr__sub { margin: 0; max-width: 32rem; font-size: 16px; color: rgba(15, 57, 139, 0.62); }
+
+/* ---- billing switcher (.switcher) ---- */
+.ath-pr .switcher {
+  position: relative; isolation: isolate;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  align-items: center; margin: 0; padding: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  background: rgba(251, 252, 255, 0.34);
+  -webkit-backdrop-filter: blur(9px) saturate(150%);
+  backdrop-filter: blur(9px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.65),
+    0 1px 2px rgba(25, 45, 100, 0.09),
+    0 6px 14px -2px rgba(25, 45, 100, 0.13),
+    0 22px 40px -12px rgba(25, 45, 100, 0.20);
+}
+.ath-pr .switcher::before {
+  content: ""; position: absolute; z-index: 0;
+  top: 0.25rem; bottom: 0.25rem; left: 0.25rem;
+  width: calc((100% - 0.5rem) / 2); border-radius: 999px;
+  background: rgba(120, 196, 255, 0.6);
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.75),
+    inset 0 -0.18em 0.4em rgba(8, 40, 110, 0.16),
+    0 0 0.5em -0.05em rgba(180, 224, 255, 0.7),
+    0 0.1em 0.7em 0 rgba(125, 198, 255, 0.5),
+    0 0 1.2em 0 rgba(95, 178, 255, 0.36);
+  transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.ath-pr .switcher[data-previous="2"]::before { transform: translateX(100%); }
+.ath-pr .switcher__legend {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.ath-pr .switcher__option {
+  position: relative; z-index: 1;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  height: 2.5rem; padding-inline: 0.75rem; border-radius: 999px;
+  font-size: 15px; font-weight: 500; white-space: nowrap;
+  color: rgba(15, 57, 139, 0.62); cursor: pointer; transition: color 0.3s ease;
+}
+@media (min-width: 640px) { .ath-pr .switcher__option { height: 3rem; padding-inline: 1.5rem; } }
+.ath-pr .switcher__option:hover,
+.ath-pr .switcher__option:has(.switcher__input:checked) { color: #0f398b; }
+.ath-pr .switcher__input {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0;
+  appearance: none; -webkit-appearance: none; opacity: 0; cursor: pointer;
+}
+.ath-pr .switcher__option:has(.switcher__input:focus-visible) { box-shadow: 0 0 0 3px rgba(0, 153, 255, 0.35); }
+.ath-pr .switcher__badge {
+  border-radius: 999px; background: rgba(0, 153, 255, 0.12);
+  padding: 0.125rem 0.5rem; font-size: 0.75rem; font-weight: 500; color: #0099ff;
+}
+@media (prefers-reduced-motion: reduce) { .ath-pr .switcher::before { transition: none; } }
+
+/* ---- the panel behind all three tiers (.glass-1) ---- */
+.ath-pr__panel {
+  margin: 0 auto; display: grid; gap: 32px;
+  border-radius: 1.35rem; padding: 16px;
+  position: relative;
+  background: rgba(251, 252, 255, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(7px) saturate(150%);
+  backdrop-filter: blur(7px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.55),
+    0 1px 2px rgba(25, 45, 100, 0.08),
+    0 4px 10px -2px rgba(25, 45, 100, 0.10),
+    0 16px 30px -10px rgba(25, 45, 100, 0.16);
+}
+@media (min-width: 640px) { .ath-pr__panel { padding-left: 32px; padding-right: 32px; } }
+@media (min-width: 768px) {
+  .ath-pr__panel {
+    grid-template-columns: repeat(3, 1fr); gap: 56px;
+    padding: 8px 48px;
+  }
+}
+
+/* ---- a plan card ---- */
+.ath-pr__card {
+  position: relative; display: flex; flex-direction: column; justify-content: space-between;
+  height: 100%; border-radius: 0.75rem; transition: transform .25s ease;
+  background: transparent;
+}
+.ath-pr__card.is-featured {
+  background: linear-gradient(to top, #0a2f74, #134391);
+  color: #fff; border: 0;
+  box-shadow: 0 24px 70px -24px rgba(15, 57, 139, 0.65);
+  outline: 1px solid rgba(0, 153, 255, 0.45); outline-offset: -1px;
+}
+@media (min-width: 768px) { .ath-pr__card.is-featured { transform: scale(1.05); } }
+.ath-pr__card-body { padding: 0 24px; }
+.ath-pr__topgap { padding-bottom: 1.1rem; }
+.ath-pr__popular {
+  display: inline-block; margin-top: 16px;
+  border-radius: 999px; background: rgba(255, 255, 255, 0.15);
+  padding: 4px 12px; font-size: 12px; font-weight: 500; color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+.ath-pr__popular-spacer { display: block; height: 26px; margin-top: 16px; }
+.ath-pr__name { margin: 12px 0 0; font-size: 30px; font-weight: 600; color: #0f398b; }
+.is-featured .ath-pr__name { color: #fff; }
+
+/* Signature wordmark — masked, glow on the wrapper (filter runs before mask) */
+.ath-pr__wordmark {
+  display: block; width: 100%; margin-top: 4px;
+  filter: drop-shadow(0 0 10px rgba(0, 153, 255, 0.38)) drop-shadow(0 0 24px rgba(0, 153, 255, 0.28));
+}
+.ath-pr__wordmark-ink {
+  display: block; width: 100%; height: 3.9325rem;
+  background-image: linear-gradient(105deg, #00bbff -12%, #0099ff 22%, #0f398b 100%);
+  -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+  -webkit-mask-position: left center; mask-position: left center;
+  -webkit-mask-size: contain; mask-size: contain;
+}
+.ath-pr__price-row { margin-top: 8px; display: flex; align-items: baseline; }
+.ath-pr__starting { margin-right: 6px; font-size: 14px; color: rgba(15, 57, 139, 0.62); }
+.is-featured .ath-pr__starting { color: rgba(255, 255, 255, 0.7); }
+.ath-pr__price { font-size: 36px; font-weight: 600; color: #0f398b; }
+.is-featured .ath-pr__price { color: #fff; }
+.ath-pr__per { margin-left: 4px; font-size: 16px; color: rgba(15, 57, 139, 0.62); }
+.is-featured .ath-pr__per { color: rgba(255, 255, 255, 0.7); }
+.ath-pr__tagline { margin: 4px 0 14px; font-size: 14px; font-weight: 500; color: #0099ff; }
+.is-featured .ath-pr__tagline { color: rgba(255, 255, 255, 0.9); }
+
+/* headline feature rows (seats / simulations / storage) */
+.ath-pr__feats { list-style: none; margin: 0 0 20px; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.ath-pr__feat { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 500; color: #0f398b; }
+.ath-pr__feat svg { width: 20px; height: 20px; flex-shrink: 0; color: #0099ff; }
+.is-featured .ath-pr__feat { color: rgba(255, 255, 255, 0.9); }
+.is-featured .ath-pr__feat svg { color: rgba(255, 255, 255, 0.8); }
+
+/* includes list */
+.ath-pr__includes { border-top: 1px solid rgba(16, 24, 40, 0.10); padding-top: 16px; }
+.is-featured .ath-pr__includes { border-top-color: rgba(255, 255, 255, 0.15); }
+.ath-pr__inc-head { margin: 0 0 12px; font-size: 16px; font-weight: 500; color: #0f398b; }
+.is-featured .ath-pr__inc-head { color: #fff; }
+.ath-pr__items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.ath-pr__item { display: flex; align-items: flex-start; }
+.ath-pr__it-body { min-width: 0; flex: 1; }
+.ath-pr__mark {
+  margin-right: 12px; margin-top: 2px; display: grid; place-content: center;
+  width: 24px; height: 24px; flex-shrink: 0; border-radius: 999px; transition: box-shadow .3s ease;
+}
+.ath-pr__mark svg { width: 14px; height: 14px; }
+.ath-pr__mark--ring { color: #0099ff; box-shadow: inset 0 0 0 1px rgba(0, 153, 255, 0.32); }
+.ath-pr__mark--ring-navy { color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); }
+.ath-pr__mark--ring svg, .ath-pr__mark--ring-navy svg { width: 14px; height: 14px; }
+.ath-pr__mark--hero {
+  color: #fff; background-image: linear-gradient(140deg, #00bbff, #0099ff 55%, #0088ff);
+  box-shadow: 0 0 0 1px rgba(0, 153, 255, 0.28), 0 2px 8px rgba(0, 187, 255, 0.22);
+  animation: ath-pr-spark 4.2s ease-out infinite;
+}
+.ath-pr__mark--hero-navy {
+  background: #fff; color: #0f398b;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55), 0 2px 10px rgba(255, 255, 255, 0.22);
+  animation: ath-pr-spark-navy 4.2s ease-out infinite;
+}
+.ath-pr__mark--hero svg, .ath-pr__mark--hero-navy svg { width: 16px; height: 16px; }
+@keyframes ath-pr-spark {
+  0%, 22%, 100% { box-shadow: 0 0 0 1px rgba(0, 153, 255, 0.28), 0 2px 8px rgba(0, 187, 255, 0.22); }
+  8% { box-shadow: 0 0 0 1px rgba(0, 153, 255, 0.5), 0 2px 16px rgba(0, 187, 255, 0.6); }
+}
+@keyframes ath-pr-spark-navy {
+  0%, 22%, 100% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.55), 0 2px 10px rgba(255, 255, 255, 0.22); }
+  8% { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.9), 0 2px 18px rgba(255, 255, 255, 0.55); }
+}
+.ath-pr__it-btn {
+  display: flex; width: 100%; align-items: flex-start; gap: 6px;
+  text-align: left; background: none; border: 0; padding: 0; cursor: pointer;
+  font-family: inherit; font-size: 14px; transition: color .2s ease;
+}
+.ath-pr__it-plain { display: inline-block; font-size: 14px; }
+.ath-pr__it-title { font-weight: 400; color: #0f398b; }
+.ath-pr__it-title.is-hero { font-weight: 600; }
+.ath-pr__it-title.on-navy { color: #fff; }
+.ath-pr__chev { margin-top: 2px; width: 14px; height: 14px; flex-shrink: 0; transition: transform .3s ease; }
+.ath-pr__it-btn[aria-expanded="true"] .ath-pr__chev { transform: rotate(180deg); }
+.ath-pr__it-reveal {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows .3s ease-out;
+}
+.ath-pr__it-reveal > div { overflow: hidden; }
+.ath-pr__it-detail { margin: 0; padding-top: 4px; font-size: 14px; font-weight: 400; color: rgba(15, 57, 139, 0.62); }
+.ath-pr__it-detail.on-navy { color: #fff; }
+
+/* flagship title sheen — a band of brighter brand colour sweeps the row */
+@keyframes ath-pr-sheen {
+  0% { background-position: 100% 50%; }
+  52% { background-position: 0% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .ath-pr__sheen {
+    background-image: linear-gradient(100deg,
+      #0f398b 0%, #0f398b 42%, #0099ff 47%, #00bbff 50%, #0099ff 53%, #0f398b 58%, #0f398b 100%);
+    background-size: 300% 100%; background-repeat: no-repeat;
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: ath-pr-sheen 4.2s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+  }
+  .ath-pr__sheen--on-navy {
+    background-image: linear-gradient(100deg,
+      #fff 0%, #fff 42%, #6ad6ff 47%, #00bbff 50%, #6ad6ff 53%, #fff 58%, #fff 100%);
+  }
+}
+
+/* footer CTA */
+.ath-pr__rule { margin: 0 24px; height: 1px; background: rgba(16, 24, 40, 0.10); }
+.is-featured .ath-pr__rule { background: rgba(255, 255, 255, 0.15); }
+.ath-pr__footer { padding: 16px 24px 0; }
+.ath-pr__cta { width: 100%; margin-bottom: 24px; font-size: 18px; }
+.ath-pr__cta .glass-button {
+  display: inline-flex; width: 100%; align-items: center; justify-content: center;
+  text-decoration: none; cursor: pointer; border: 0; font-family: inherit;
+}
+.ath-pr__cta .glass-button-text { display: block; width: 100%; text-align: center; }
+
+.ath-pr__footnote {
+  margin: 48px 0 0; text-align: center; font-size: 14px; color: rgba(15, 57, 139, 0.62);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ath-pr__sheen { background-image: none; -webkit-text-fill-color: currentColor; animation: none; }
+  .ath-pr__mark--hero, .ath-pr__mark--hero-navy { animation: none; }
+  .ath-pr__it-reveal { transition: none; }
+}
 @media (max-width: 860px) {
-  /* Match the sped-up phone stats reveal (JS DUR 900ms): the bar/column fills are
-     CSS transitions that were 2s, so on phone they lagged the numbers. */
-  .ath-stats__bar-fill { transition: width .9s cubic-bezier(0.22,1,0.36,1) !important; }
-  .ath-stats__col-bar  { transition: height .9s cubic-bezier(0.22,1,0.36,1), opacity .4s ease !important; }
+  .ath-pr .switcher, .ath-pr__panel { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  .ath-pr__panel { background: rgba(251, 252, 255, 0.55); }
+  .ath-pr .switcher { background: rgba(251, 252, 255, 0.9); }
+  .ath-pr__card.is-featured { margin: 8px 0; }
+}
 
-  /* While a number is actively counting, paint it solid: these are gradient text
-     (background-clip:text), and every text write re-rasters the whole clipped
-     gradient — 60x/s across several counters right as the section scrolls in was
-     crashing the GPU process on phones. The JS restores the gradient on the final
-     frame, so the settled look is pixel-identical. */
-  .ath-stats__big.is-counting,
-  .ath-num.is-counting {
-    background-image: none !important;
-    -webkit-text-fill-color: rgb(21, 96, 189) !important;
-    color: rgb(21, 96, 189) !important;
-  }
-
-  /* The stats/calc cards carry 90-100px-blur drop shadows; rasterising those the
-     moment the section renders mid-scroll allocates huge blur textures. Tighter
-     shadow, same floating feel. */
-  .ath-stats__card, .ath-calc__card {
-    box-shadow:
-      inset 0 2px 2px rgba(0,0,0,0.05),
-      inset 0 -2px 2px rgba(255,255,255,0.5),
-      inset 0 0 1px 2px rgba(255,255,255,0.5),
-      0 12px 28px -16px rgba(15,57,139,0.35) !important;
-  }
-
-  /* ~40 dial ticks each gain a drop-shadow() filter layer during the reveal —
-     drop the glow on phones (ticks still light up in the brand gradient). */
-  .ath-dial-tick.is-on { filter: none !important; }
-
-  /* P0-A — Neutralise the ~60 decorative blurred radial-gradient "Glow" planes.
-     Each blur() forces its own composited GPU texture; on a phone they pile up
-     as you scroll and exhaust GPU memory (tab crash). The gradients are already
-     soft, so removing the blur is visually near-identical. */
-  #main [data-framer-name="Glow"] {
-    filter: none !important;
-    -webkit-filter: none !important;
-  }
-  /* The single large fixed hero glow ("Gradient Blur" = .framer-lbyv5o): keep the
-     soft look but cut the cost — a full-viewport blur(80px) is one of the most
-     expensive mobile paint ops. */
-  #main [data-framer-name="Gradient Blur"] {
-    filter: blur(20px) !important;
-    -webkit-filter: blur(20px) !important;
-  }
-
-  /* P0-B — Stop Framer speculatively promoting ~50 compositor layers. Framer
-     drives will-change through these two custom properties; forcing them to
-     `auto` collapses the variable-driven promotions (the few genuinely-animating
-     appear elements use a hard-coded will-change:transform and are left alone). */
-  #main {
-    --framer-will-change-override: auto;
-    --framer-will-change-effect-override: auto;
-  }
-  /* The tagline runs the cheap opacity fade on phones (P3), so the per-letter
-     3D/blur compositor hints on its ~44 letter spans are pure wasted GPU layers. */
-  .ath-flux, .ath-flux__phrase, .ath-ch, .ath-num { will-change: auto !important; }
-
-  /* P1 — Defer rendering of the below-fold sections until they near the viewport
-     (content-visibility:auto ⇒ the browser skips their layout/paint/compositing
-     and image decode entirely while off-screen). Biggest win for scroll load +
-     memory. `contain-intrinsic-size: auto <measured>px` reserves the right height
-     up-front (no scroll-jump) and remembers the real size after first render.
-     Heights measured live at 393px. NB: `.framer-f786x8` is a Framer-hashed class
-     (the FAQ) — re-measure if the site is ever re-exported from Framer. */
-  .ath-stats      { content-visibility: auto; contain-intrinsic-size: auto 1060px; }
-  .ath-calc       { content-visibility: auto; contain-intrinsic-size: auto 820px; }
-  .framer-f786x8  { content-visibility: auto; contain-intrinsic-size: auto 410px; }
-  /* Scan/Sculpt/Satisfy feature cards — 980px of always-rendered content missed in
-     the first pass (it hides inside a display:contents ssr-variant wrapper, so it
-     never showed up as a root child). Framer-hashed class too — re-check on re-export. */
-  .framer-1pkm4pd-container { content-visibility: auto; contain-intrinsic-size: auto 980px; }
-  .ath-cg-section { content-visibility: auto; contain-intrinsic-size: auto 250px; }
-
-  /* P4 — Dark mode is currently dormant (toggle not wired), but if it is ever
-     enabled the full-page filter:invert() would instantly crash a phone. Never
-     run the whole-page filter on mobile; media re-inversion and the counter-invert
-     glow become no-ops too. */
-  html.dark #main { filter: none !important; -webkit-filter: none !important; background: rgb(8, 11, 22); }
-  html.dark #main img,
-  html.dark #main video,
-  html.dark #main canvas,
-  html.dark #main svg image,
-  html.dark #main::before { filter: none !important; -webkit-filter: none !important; }
+/* The pale-azure GlassButton tone the app's pricing cards use for the
+   non-featured tiers. The site only defines `--haze`, so without this the
+   buttons fall back to plain white glass. Verbatim from the app
+   (theme-v2.css .glass-button--haze-light). */
+.glass-button--haze-light .glass-button {
+  background: rgba(120, 196, 255, 0.6);
+  -webkit-backdrop-filter: blur(clamp(1px, 0.125em, 4px)) saturate(195%) brightness(1.05);
+  backdrop-filter: blur(clamp(1px, 0.125em, 4px)) saturate(195%) brightness(1.05);
+  box-shadow:
+    inset 0 0.14em 0.22em rgba(255, 255, 255, 0.75),
+    inset 0 -0.18em 0.4em rgba(8, 40, 110, 0.16),
+    0 0 0.5em -0.05em rgba(180, 224, 255, 0.7),
+    0 0.1em 0.7em 0 rgba(125, 198, 255, 0.5),
+    0 0 1.2em 0 rgba(95, 178, 255, 0.36);
+}
+.glass-button--haze-light .glass-button-text {
+  color: rgba(21, 96, 189, 0.9);
+  font-weight: 650;
+  text-shadow: 0 0.08em 0.35em rgba(255, 255, 255, 0.55);
 }
 
 /* =============================================================================
-   PHONE (<=600px): more compact rhythm + standard mobile sizing.
-   The injected sections carried desktop-scaled padding and headings that hit
-   their clamp minimums (~60px section padding, 40px titles, 28px card insets) —
-   too airy on a phone. Tighten section spacing, card insets and headings, and
-   dial the busy background particles down. Phone-only; tablet + desktop are
-   untouched (they never match this query).
+   Studio demo — a live slice of the app's editor.
+
+   The panel follows the studio's frosting discipline (app/studio/studio.css):
+   ONE backdrop-filter per floating surface, children of a frosted surface use
+   plain rgba fills and never re-frost. The sliders are the resolved form of the
+   app's NumberFlowSlider (3px #e4ecfa track, azure→navy fill, 20px white thumb).
    ========================================================================== */
+.ath-demo {
+  position: relative; z-index: 1;
+  width: 100%; box-sizing: border-box;
+  padding: clamp(72px, 9.5vw, 124px) 0 0;
+  background: transparent;
+  font-family: "Satoshi", "Satoshi Placeholder", sans-serif;
+  color: #0f398b;
+}
+/* min(1080px, 94vw), matching .ath-feat__inner, .ath-stats__card and
+   .ath-calc__card: every section title on the page then starts at the same
+   left edge instead of this one beginning 84px further out. */
+.ath-demo__inner { width: min(1080px, 94vw); margin: 0 auto; box-sizing: border-box; }
+
+.ath-demo__head { padding-bottom: 28px; }
+/* Same treatment as the other section titles: Satoshi 500, tight tracking,
+   the 161deg white-to-blue gradient clipped to the glyphs. The padding-bottom
+   is what keeps the "y" in "Try" from being sliced off — the clip stops at the
+   element's box, and at line-height 1.12 that box ends above the descenders. */
+.ath-demo__title {
+  margin: 0 0 14px;
+  font-weight: 500;
+  font-size: clamp(28px, 4.2vw, 44px); letter-spacing: -0.02em; line-height: 1.12;
+  /* fit-content, not the full column: the gradient is measured across the
+     element's box, so on a block-width heading a short title sits entirely in
+     the pale end of the ramp and reads washed out. */
+  width: fit-content;
+  padding-bottom: 0.18em;
+  background-image: linear-gradient(161deg, rgb(255, 255, 255) -42%, rgb(21, 96, 189) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.ath-demo__sub { margin: 0; max-width: 36rem; font-size: 16px; color: rgba(15, 57, 139, 0.62); }
+
+/* ---- the frosted shell (s1, same ladder rung as the pricing panel) ---- */
+.ath-demo__panel {
+  display: grid; gap: 16px;
+  border-radius: 1.35rem; padding: 16px;
+  background: rgba(251, 252, 255, 0.20);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(7px) saturate(150%);
+  backdrop-filter: blur(7px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.55),
+    0 1px 2px rgba(25, 45, 100, 0.08),
+    0 4px 10px -2px rgba(25, 45, 100, 0.10),
+    0 16px 30px -10px rgba(25, 45, 100, 0.16);
+}
+@media (min-width: 900px) {
+  .ath-demo__panel { grid-template-columns: minmax(0, 1fr) 340px; padding: 20px; gap: 20px; }
+}
+
+/* ---- stage ---- */
+.ath-demo__stage {
+  position: relative; overflow: hidden;
+  border-radius: 0.95rem;
+  min-height: 340px; height: 62vw; max-height: 520px;
+  background: rgba(252, 253, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+@media (min-width: 900px) { .ath-demo__stage { height: auto; min-height: 580px; max-height: none; } }
+/* The studio's azure floor glow that grounds the head on the paper */
+.ath-demo__glow {
+  position: absolute; left: 50%; top: 54%;
+  width: min(72vmin, 620px); height: min(72vmin, 620px);
+  transform: translate(-50%, -50%); pointer-events: none;
+  background: radial-gradient(closest-side, rgba(0, 153, 255, 0.10), rgba(0, 187, 255, 0.045) 52%, transparent 74%);
+  filter: blur(8px);
+}
+.ath-demo__canvas {
+  position: absolute; inset: 0; display: block;
+  width: 100%; height: 100%;
+  opacity: 0; transition: opacity 0.6s ease;
+  /* The scan runs out at the collarbone, in torn shoulder planes; fade the
+     bottom edge so the crop reads as framing rather than a cut-off. Measured
+     against the render rather than guessed: the neck holds a clean ~220px
+     band down to 82% of the stage and the torn geometry starts at 85%, so the
+     ramp stays solid through the neck and falls away over what follows. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 84%, rgba(0, 0, 0, 0.35) 89%, rgba(0, 0, 0, 0.06) 93%, transparent 97%);
+  mask-image: linear-gradient(to bottom, #000 84%, rgba(0, 0, 0, 0.35) 89%, rgba(0, 0, 0, 0.06) 93%, transparent 97%);
+}
+.ath-demo__stage.is-ready .ath-demo__canvas { opacity: 1; }
+
+/* loading / error state, and the tap-to-load poster on metered connections */
+.ath-demo__state {
+  position: absolute; inset: 0; display: flex; gap: 10px;
+  align-items: center; justify-content: center;
+  font-size: 14px; color: rgba(15, 57, 139, 0.55);
+  pointer-events: none; text-align: center; padding: 0 24px;
+  opacity: 0; transition: opacity 0.35s ease;
+}
+.ath-demo__stage.is-loading .ath-demo__state { opacity: 1; }
+.ath-demo__stage.is-ready .ath-demo__state { opacity: 0; }
+.ath-demo__state.is-error { opacity: 1; color: rgba(15, 57, 139, 0.7); }
+.ath-demo__state.is-error .ath-demo__spinner { display: none; }
+.ath-demo__spinner {
+  width: 16px; height: 16px; flex: none; border-radius: 50%;
+  border: 2px solid rgba(0, 153, 255, 0.22); border-top-color: #0099ff;
+  animation: ath-demo-spin 0.8s linear infinite;
+}
+@keyframes ath-demo-spin { to { transform: rotate(360deg); } }
+
+.ath-demo__load {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: none; align-items: center; gap: 8px;
+  padding: 10px 18px; border: 1px solid rgba(255, 255, 255, 0.6); border-radius: 999px;
+  background: rgba(251, 252, 255, 0.75);
+  font: inherit; font-size: 14px; font-weight: 500; color: #0f398b; cursor: pointer;
+  box-shadow: 0 1px 2px rgba(25, 45, 100, 0.09), 0 8px 20px -8px rgba(25, 45, 100, 0.2);
+}
+.ath-demo__stage.is-deferred .ath-demo__load { display: inline-flex; }
+
+.ath-demo__hint {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+  padding: 5px 12px; border-radius: 999px;
+  background: rgba(251, 252, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  font-size: 12px; color: rgba(15, 57, 139, 0.55); white-space: nowrap;
+  pointer-events: none; opacity: 0; transition: opacity 0.4s ease;
+}
+.ath-demo__stage.is-ready .ath-demo__hint { opacity: 1; }
+.ath-demo__stage.is-touched .ath-demo__hint { opacity: 0; }
+/* ---- tool panel: the studio's ToolPanel + bits.tsx, resolved ------------ */
+/* One frost for the section shell; everything in here is a plain rgba fill,
+   the way app/studio/studio.css keeps its ladder honest. */
+.ath-demo__tools {
+  display: flex; flex-direction: column; min-height: 0;
+  border-radius: 0.95rem;
+  background: rgba(251, 252, 255, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.65);
+  overflow: hidden;
+}
 @media (max-width: 600px) {
   /* tighter vertical rhythm between sections */
   .ath-how-head   { padding-top: 34px; }
@@ -1366,33 +1879,357 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   .ath-heroshot { margin-top: -24px !important; }
 }
 
-/* ---------------------- page-transition veil ------------------------------ */
-/* White overlay faded in before cross-page navigation (home ⇄ request access
-   ⇄ app sign-up); the destination page animates itself back in. */
-.ath-veil {
-  position: fixed; inset: 0; z-index: 4000;
-  background: #ffffff; opacity: 0; pointer-events: none;
-  transition: opacity .32s ease;
+/* header — icon chip, title/subtitle, "Reset all" pill */
+.st-toolhead {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 16px 16px 10px;
 }
-.ath-veil.is-on { opacity: 1; pointer-events: auto; }
-@media (prefers-reduced-motion: reduce) { .ath-veil { transition: none; } }
+.st-toolhead__id { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.st-toolhead__icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; flex: none; border-radius: 11px; color: #0099ff;
+}
+.st-toolhead__icon svg { width: 16px; height: 16px; }
+.st-inset { background: rgba(252, 253, 255, 0.55); border: 1px solid rgba(255, 255, 255, 0.6); }
+.st-toolhead__title {
+  margin: 0; font-size: 13.5px; font-weight: 800; letter-spacing: -0.01em; color: #0f398b;
+}
+.st-toolhead__sub { margin: 0; font-size: 10.5px; font-weight: 500; color: rgba(15, 57, 139, 0.5); }
+.st-hairline {
+  height: 1px; border: 0; margin: 0 16px;
+  background-image: linear-gradient(90deg, transparent, rgba(15, 57, 139, 0.16), transparent);
+}
+
+/* quiet pill buttons */
+.ath-demo .st-pill {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  border-radius: 999px; padding: 6px 12px;
+  border: 1px solid rgba(16, 24, 40, 0.1);
+  background: rgba(255, 255, 255, 0.5);
+  color: rgba(15, 57, 139, 0.78);
+  font: inherit; font-size: 11.5px; font-weight: 600; cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, background-color 0.16s ease, transform 0.16s ease;
+}
+.ath-demo .st-pill:hover { color: #0099ff; border-color: rgba(0, 153, 255, 0.35); background: rgba(255, 255, 255, 0.75); }
+.ath-demo .st-pill:active { transform: scale(0.97); }
+.ath-demo__compare { width: 100%; touch-action: none; }
+.ath-demo__compare.is-held {
+  color: #0f398b; background: rgba(0, 153, 255, 0.12); border-color: rgba(0, 153, 255, 0.3);
+}
+.ath-demo__tools-foot { padding: 10px 16px 14px; }
+
+/* scroll body */
+.ath-demo__cats {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-bottom: 12px;
+  scrollbar-width: thin; scrollbar-color: rgba(15, 57, 139, 0.18) transparent;
+}
+.st-scroll::-webkit-scrollbar { width: 7px; }
+.st-scroll::-webkit-scrollbar-track { background: transparent; }
+.st-scroll::-webkit-scrollbar-thumb { background: rgba(15, 57, 139, 0.16); border-radius: 999px; }
+.st-scroll::-webkit-scrollbar-thumb:hover { background: rgba(15, 57, 139, 0.3); }
+/* Sized so the open group fits without a scrollbar, and the stage's own
+   minimum matches the panel at that height — so collapsing the group doesn't
+   shrink the model beside it. */
+@media (min-width: 900px) { .ath-demo__cats { max-height: 480px; } }
+
+/* ---- Collapsible ---- */
+.st-collapsible { border-bottom: 1px solid rgba(15, 57, 139, 0.08); }
+.st-collapsible:last-child { border-bottom: 0; }
+.st-collapsible__btn {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  width: 100%; padding: 12px 16px; border: 0; background: none; cursor: pointer;
+  font: inherit; text-align: left; color: #0f398b;
+  transition: background-color 0.16s ease;
+}
+.st-collapsible__btn:hover { background: rgba(236, 240, 248, 0.55); }
+.st-collapsible__title {
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em;
+  /* Hold the badge's height whether or not the badge is there: the panel sets
+     the row height, the row sets the stage height, and the stage sets the
+     camera — so 2px here would nudge the model every time a count hit zero. */
+  min-height: 16px;
+}
+.st-count {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 16px; min-width: 16px; padding: 0 4px; border-radius: 999px;
+  background: rgba(0, 153, 255, 0.14); color: #0099ff;
+  font-size: 9.5px; font-weight: 700; letter-spacing: 0;
+}
+.st-count[hidden] { display: none; }
+.st-chev { width: 14px; height: 14px; flex: none; color: rgba(15, 57, 139, 0.45); transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1); }
+.st-collapsible__btn[aria-expanded="true"] .st-chev { transform: rotate(180deg); }
+.st-collapsible__body { display: grid; transition: grid-template-rows 0.32s cubic-bezier(0.25, 1, 0.5, 1); }
+.st-collapsible__body > div { overflow: hidden; }
+.st-collapsible__inner { display: flex; flex-direction: column; gap: 16px; padding: 4px 16px 16px; }
+
+/* ---- FlowSlider ---- */
+.st-slider__row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-bottom: 6px;
+}
+.st-slider__name {
+  display: flex; align-items: center; gap: 6px; min-width: 0;
+  font-size: 11.5px; font-weight: 600; color: #0f398b;
+}
+.st-slider__label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the azure "edited" tick */
+.st-slider__dot {
+  width: 6px; height: 6px; flex: none; border-radius: 999px;
+  background: #0099ff; box-shadow: 0 0 6px rgba(0, 153, 255, 0.7);
+  opacity: 0; transition: opacity 0.16s ease;
+}
+.st-slider.is-modified .st-slider__dot { opacity: 1; }
+.st-slider__right { display: flex; align-items: center; gap: 4px; flex: none; }
+.st-slider__val { font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; color: #0f398b; }
+.st-slider__reset {
+  padding: 0 4px; border: 0; border-radius: 4px; background: none; cursor: pointer;
+  font: inherit; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em;
+  color: rgba(15, 57, 139, 0.35);
+  opacity: 0; pointer-events: none; transition: opacity 0.16s ease, color 0.16s ease;
+}
+.st-slider__reset:hover { color: #0099ff; }
+.st-slider.is-modified:hover .st-slider__reset,
+.st-slider.is-modified:focus-within .st-slider__reset { opacity: 1; pointer-events: auto; }
+
+/* The track, fill and thumb are painted (a native range can't fill from its
+   centre); the input itself stays on top, transparent, so dragging, the arrow
+   keys and the accessibility tree are all still the platform's. */
+.st-slider__ctl { position: relative; display: flex; align-items: center; height: 16px; }
+.st-slider__track { position: relative; width: 100%; height: 3px; border-radius: 999px; background: #e2eaf8; }
+.st-slider__tick {
+  position: absolute; left: 50%; top: 50%; width: 1px; height: 7px;
+  transform: translateY(-50%); border-radius: 2px; background: rgba(15, 57, 139, 0.25);
+}
+.st-slider__fill {
+  position: absolute; top: 0; height: 100%; border-radius: 999px;
+  left: var(--fl, 50%); width: var(--fw, 0%);
+  background: linear-gradient(90deg, #00bbff, #0099ff 60%, #0f398b);
+}
+.st-slider__thumb {
+  position: absolute; top: 50%; left: calc(8px + var(--pct, 0.5) * (100% - 16px));
+  width: 16px; height: 16px; border-radius: 999px; background: #fff;
+  box-shadow: 0 2px 8px rgba(15, 57, 139, 0.3), 0 0 0 1px rgba(15, 57, 139, 0.12);
+  transform: translate(-50%, -50%); pointer-events: none;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.st-slider:hover .st-slider__thumb { transform: translate(-50%, -50%) scale(1.12); }
+.st-slider__ctl:has(.st-slider__input:focus-visible) .st-slider__thumb {
+  box-shadow: 0 0 0 4px rgba(0, 153, 255, 0.3), 0 2px 8px rgba(15, 57, 139, 0.3);
+}
+.st-slider__input {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0;
+  -webkit-appearance: none; appearance: none;
+  background: transparent; opacity: 0; cursor: pointer;
+}
+.st-slider__input:focus { outline: none; }
+/* Sized to the painted thumb so the native track inset matches it exactly. */
+.st-slider__input::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; border-radius: 999px; }
+.st-slider__input::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 999px; }
+
+/* ---- footer note + CTA ---- */
+.ath-demo__foot {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 18px;
+  padding: 24px 0 0;
+}
+@media (min-width: 768px) { .ath-demo__foot { flex-direction: row; align-items: center; justify-content: space-between; gap: 28px; } }
+.ath-demo__note { margin: 0; max-width: 44rem; font-size: 13.5px; line-height: 165%; color: rgba(15, 57, 139, 0.52); }
+.ath-demo .ath-demo__cta { width: fit-content; flex: none; font-size: 16px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .st-collapsible__body, .st-chev, .st-slider__thumb, .st-slider__dot, .st-slider__reset,
+  .ath-demo__canvas, .ath-demo__hint, .ath-demo__state { transition: none; }
+  .st-slider:hover .st-slider__thumb { transform: translate(-50%, -50%); }
+  .ath-demo__spinner { animation: none; }
+}
 
 /* =============================================================================
-   LITE MODE — crash backstop. `html.ath-lite` is set by the watchdog in
-   athli-enhance.js ONLY after two detected mid-use crashes on this device
-   (or explicitly via ?perf=lite; ?perf=full clears it). Nobody else ever sees
-   these rules: the full design — particles and blur included — stays exactly
-   as designed on every device that doesn't crash. On a crashing device the
-   animated background is replaced by the same static brand glow, and the
-   grain overlay is dropped, so the page can actually be used.
+   Features — one panel, feature list left, showcase right. The shell is the
+   "Why clinics switch" card material (.ath-stats__card): a translucent -75deg
+   sheen with the conic glass rim, so the page's noise and particles show
+   straight through it.
    ========================================================================== */
-html.ath-lite #main [data-framer-name="Gradient Blur"] {
-  filter: none !important;
-  -webkit-filter: none !important;
-  background:
-    radial-gradient(120% 90% at 50% 0%, rgba(0, 136, 255, 0.16), rgba(181, 225, 255, 0.05) 55%, rgba(255, 255, 255, 0) 78%) !important;
+.ath-feat {
+  position: relative; z-index: 1;
+  width: 100%; box-sizing: border-box;
+  padding: clamp(72px, 9.5vw, 124px) 24px 0;
+  font-family: "Satoshi", "Satoshi Placeholder", sans-serif;
+  color: #0f398b;
+  display: flex; flex-direction: column; align-items: center;
 }
-html.ath-lite #main [data-framer-name="Gradient Blur"] canvas { display: none !important; }
-/* grain overlays — the index and request/contact exports use different hashes */
-html.ath-lite .framer-13nk9po-container,
-html.ath-lite .framer-1yv7k8j-container { display: none !important; }
+.ath-feat__inner { width: min(1080px, 94vw); box-sizing: border-box; }
+.ath-feat__head { padding-bottom: 28px; }
+/* Same treatment as every other section title: Satoshi 500, tight tracking,
+   the 161deg white-to-blue gradient clipped to the glyphs. */
+.ath-feat__title {
+  margin: 0 0 14px;
+  font-weight: 500;
+  font-size: clamp(28px, 4.2vw, 44px); letter-spacing: -0.02em; line-height: 1.12;
+  /* fit-content, not the full column: the gradient is measured across the
+     element's box, so on a block-width heading a short title sits entirely in
+     the pale end of the ramp and reads washed out. */
+  width: fit-content;
+  padding-bottom: 0.18em;                 /* room for descenders under the clip */
+  background-image: linear-gradient(161deg, rgb(255, 255, 255) -42%, rgb(21, 96, 189) 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.ath-feat__sub { margin: 0; max-width: 36rem; font-size: 16px; color: rgba(15, 57, 139, 0.62); }
+
+/* ---- the card shell ---- */
+.ath-feat__card {
+  position: relative;
+  box-sizing: border-box;
+  padding: clamp(16px, 2.2vw, 26px);
+  border-radius: 30px;
+  background: linear-gradient(-75deg, rgba(255,255,255,0.05), rgba(255,255,255,0.2), rgba(255,255,255,0.05));
+  -webkit-backdrop-filter: blur(0.01em);
+          backdrop-filter: blur(0.01em);
+  box-shadow:
+    inset 0 2px 2px rgba(0,0,0,0.05),
+    inset 0 -2px 2px rgba(255,255,255,0.5),
+    0 2px 1px -2px rgba(0,0,0,0.25),
+    inset 0 0 1px 2px rgba(255,255,255,0.5),
+    0 46px 100px -52px rgba(15,57,139,0.42),
+    0 14px 34px -18px rgba(15,57,139,0.18);
+}
+.ath-feat__card::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 2px;
+  pointer-events: none;
+  background:
+    conic-gradient(from -75deg at 50% 50%,
+      rgba(0,0,0,0.5), rgba(0,0,0,0) 5% 40%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0) 60% 95%, rgba(0,0,0,0.5)),
+    linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.5));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5);
+}
+.ath-feat__panel { display: grid; gap: 16px; }
+/* stretch, not start: the list runs the full height of the showcase beside it */
+@media (min-width: 900px) {
+  .ath-feat__panel { grid-template-columns: 288px minmax(0, 1fr); gap: 20px; align-items: stretch; }
+}
+
+/* ---- the list ---- */
+.ath-feat__list {
+  display: flex; flex-direction: column; gap: 2px;
+  border-radius: 0.95rem; padding: 8px;
+  background: rgba(251, 252, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+/* Each row takes an equal share of whatever height the showcase sets, so the
+   column reads as one block rather than a short list floating at the top. */
+@media (min-width: 900px) { .ath-feat__row { flex: 1 1 0; min-height: 48px; } }
+.ath-feat__row {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 13px 12px 13px 14px; border: 0; border-radius: 0.7rem;
+  background: none; cursor: pointer; text-align: left;
+  font: inherit; font-size: 14.5px; font-weight: 500; color: rgba(15, 57, 139, 0.66);
+  transition: color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
+}
+/* The active marker is an inset bar rather than a left border, so the row
+   doesn't shift by a pixel when it activates. */
+.ath-feat__row::before {
+  content: ""; position: absolute; left: 6px; top: 50%; width: 2px; height: 0;
+  transform: translateY(-50%); border-radius: 2px; background: #0099ff;
+  transition: height 0.22s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.ath-feat__row:hover { color: #0f398b; background: rgba(236, 240, 248, 0.6); }
+.ath-feat__row.is-active {
+  color: #0f398b; font-weight: 600;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 2px rgba(25, 45, 100, 0.07), 0 6px 14px -8px rgba(25, 45, 100, 0.22);
+}
+.ath-feat__row.is-active::before { height: 18px; }
+.ath-feat__row:focus-visible { outline: 2px solid rgba(0, 153, 255, 0.55); outline-offset: 2px; }
+.ath-feat__row-name { min-width: 0; }
+.ath-feat__row-chev {
+  width: 15px; height: 15px; flex: none; color: rgba(15, 57, 139, 0.28);
+  opacity: 0; transform: translateX(-4px);
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.ath-feat__row.is-active .ath-feat__row-chev { opacity: 1; transform: none; color: #0099ff; }
+
+/* ---- the showcase ---- */
+.ath-feat__show {
+  position: relative; display: grid; align-items: stretch;
+  border-radius: 0.95rem; padding: 14px;
+  background: rgba(251, 252, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+/* Panes are stacked, not swapped in flow: the outgoing one fades under the
+   incoming one instead of the box collapsing and snapping back open. */
+.ath-feat__show > * { grid-area: 1 / 1; }
+.ath-feat__pane {
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transform: translateY(8px) scale(0.995);
+  transition: opacity 0.42s ease, transform 0.42s cubic-bezier(0.25, 1, 0.5, 1), visibility 0s linear 0.42s;
+}
+.ath-feat__pane.is-active {
+  opacity: 1; visibility: visible; pointer-events: auto; transform: none;
+  transition: opacity 0.42s ease, transform 0.42s cubic-bezier(0.25, 1, 0.5, 1), visibility 0s;
+}
+
+.ath-feat__media {
+  position: relative; aspect-ratio: 1600 / 791;
+  border-radius: 0.7rem; overflow: hidden;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 1px 2px rgba(25, 45, 100, 0.06), 0 10px 24px -14px rgba(25, 45, 100, 0.28);
+}
+.ath-feat__img {
+  position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: cover;
+  opacity: 0; transform: scale(1.012);
+  transition: opacity 0.72s ease, transform 0.9s cubic-bezier(0.25, 1, 0.5, 1);
+}
+.ath-feat__img.is-on { opacity: 1; transform: none; }
+
+/* ---- slide indicators: a dot each, and a bar that fills on the live one ---- */
+.ath-feat__inds { display: flex; align-items: center; justify-content: center; gap: 7px; padding: 12px 0 2px; }
+.ath-feat__ind {
+  position: relative; height: 4px; width: 8px; padding: 0; border: 0; cursor: pointer;
+  border-radius: 999px; background: rgba(15, 57, 139, 0.16); overflow: hidden;
+  transition: width 0.34s cubic-bezier(0.25, 1, 0.5, 1), background-color 0.34s ease;
+}
+.ath-feat__ind:hover { background: rgba(15, 57, 139, 0.3); }
+.ath-feat__ind.is-on { width: 30px; background: rgba(0, 153, 255, 0.18); }
+.ath-feat__ind-fill {
+  position: absolute; inset: 0; width: 0; border-radius: 999px;
+  background: linear-gradient(90deg, #00bbff, #0099ff 60%, #0f398b);
+}
+.ath-feat__ind:focus-visible { outline: 2px solid rgba(0, 153, 255, 0.55); outline-offset: 3px; }
+
+/* ---- no screenshot: the copy leads, the icon stays as a mark ---- */
+.ath-feat__plate {
+  display: flex; align-items: center; justify-content: center;
+  padding: clamp(26px, 4vw, 44px) 0 clamp(6px, 1vw, 12px);
+  color: rgba(0, 153, 255, 0.42);
+}
+.ath-feat__plate svg { width: 34px; height: 34px; }
+.ath-feat__pane--copy { display: flex; flex-direction: column; justify-content: center; min-height: 100%; }
+.ath-feat__pane--copy .ath-feat__body {
+  margin: 0 auto; max-width: 34ch; text-align: center;
+  font-size: clamp(19px, 2.3vw, 26px); line-height: 148%;
+}
+.ath-feat__pane--copy .ath-feat__lead { display: block; margin-bottom: 0.35em; }
+
+/* ---- description ---- */
+.ath-feat__body {
+  margin: 18px 2px 2px; max-width: 64ch;
+  font-size: 15px; line-height: 172%; letter-spacing: -0.003em;
+  color: rgba(15, 57, 139, 0.56);
+  text-wrap: pretty;
+}
+/* The first sentence is the claim in every one of these; the rest is detail. */
+.ath-feat__lead { font-weight: 600; color: #0f398b; letter-spacing: -0.01em; }
+
+@media (max-width: 899px) {
+  .ath-feat__row { padding: 12px 10px 12px 13px; font-size: 14px; }
+  .ath-feat__body { font-size: 14px; margin-top: 16px; }
+  .ath-feat__inds { padding-top: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ath-feat__pane, .ath-feat__row, .ath-feat__row::before, .ath-feat__row-chev,
+  .ath-feat__img, .ath-feat__ind, .ath-feat__ind-fill { transition: none; }
+}
