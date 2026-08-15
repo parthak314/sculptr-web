@@ -215,6 +215,12 @@ html.dark .ath-theme-toggle .ath-icon-moon { display: none; }
    FOOTER
    ========================================================================== */
 .ath-footer {
+  /* Above Framer's fixed background layer, the same guard every injected
+     section carries. The footer never got it, and .framer-lbyv5o computes to
+     z-index:0 at phone widths (auto at desktop) — a positioned element with a
+     z-index paints over in-flow content, which is why its gradient washed
+     across the footer text on phones and nowhere else. */
+  position: relative; z-index: 1;
   font-family: var(--ath-font);
   background: var(--ath-footer-bg);
   border-top: 1px solid var(--ath-footer-border);
@@ -2238,4 +2244,44 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
 @media (prefers-reduced-motion: reduce) {
   .ath-feat__pane, .ath-feat__row, .ath-feat__row::before, .ath-feat__row-chev,
   .ath-feat__img, .ath-feat__ind, .ath-feat__ind-fill { transition: none; }
+}
+
+/* =============================================================================
+   MOBILE (<=860px) — fixes reported off the live phone build.
+   ========================================================================== */
+@media (max-width: 860px) {
+  /* --- Footer: readable ---------------------------------------------------- */
+  /* The real culprit: the footer fill is rgba(...,0.9) and relies on its
+     backdrop blur to even out what shows through — and the phone perf rule
+     strips backdrop-filter, so the Framer gradient canvas behind it came
+     through mottled and ate the contrast, worst on the lightest text.
+     Measured: blur(8px) at 1440, none at 390. Opaque fill on phones. */
+  .ath-footer { background: rgb(247, 250, 255); }
+  html.dark .ath-footer { background: rgb(10, 15, 28); }
+  /* And the trust row itself: 0.62 / 0.45 alpha at 12 / 11px is quiet-but-
+     legible on a desktop panel and too faint on a phone either way. */
+  .ath-trust__item { font-size: 13px; color: rgba(15, 57, 139, 0.85); }
+  .ath-trust__icon { opacity: 1; color: rgba(15, 57, 139, 0.62); }
+  .ath-trust__note { font-size: 12px; line-height: 1.65; color: rgba(15, 57, 139, 0.68); }
+
+  /* --- Hero CTA glow: stop slicing it into a rectangle -------------------- */
+  /* .framer-d498g3 is 320x181 with overflow:hidden and its child overflows it
+     by 14px top and bottom, so the button's round halo gets cut off square.
+     Neither it nor .framer-1dci305 paints anything — no background, no border,
+     measured — so the clip is doing nothing except cutting the glow. */
+  #main .framer-d498g3,
+  #main .framer-1dci305 { overflow: visible !important; }
+
+  /* --- Centre the section heads and their copy --------------------------- */
+  /* The titles are width:fit-content — the gradient is measured across the
+     element's box — so they need the auto margins as well as the text-align. */
+  .ath-feat__head, .ath-demo__head, .ath-pr__head { text-align: center; }
+  .ath-pr__head { align-items: center; }
+  .ath-feat__title, .ath-demo__title, .ath-pr__title { margin-left: auto; margin-right: auto; }
+  .ath-feat__sub, .ath-demo__sub, .ath-pr__sub,
+  .ath-feat__body, .ath-demo__note {
+    margin-left: auto; margin-right: auto; text-align: center;
+  }
+  .ath-demo__foot { align-items: center; text-align: center; }
+  .ath-demo .ath-demo__cta { margin-left: auto; margin-right: auto; }
 }

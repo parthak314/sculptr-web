@@ -2266,7 +2266,12 @@
       var T = window.ATH3D;
 
       var renderer = new T.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      // Phones cap at 1.5, not 2: a 3x iPhone at dpr 2 backs a 390px stage with
+      // ~1.4x the pixels of 1.5 for no visible gain at this size, and the GPU
+      // memory that buys is the scarcest thing on the page.
+      var PHONE = false;
+      try { PHONE = window.matchMedia && window.matchMedia("(max-width: 860px)").matches; } catch (e) {}
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, PHONE ? 1.5 : 2));
       renderer.toneMapping = T.ACESFilmicToneMapping;
 
       var scene = new T.Scene();
@@ -2400,10 +2405,25 @@
         dirty = true;
       }
 
+      /* Don't draw while the page is moving. A fast flick asks the compositor
+         for a lot at once, and a WebGL frame per rAF on top of it is the most
+         expensive thing on the page — this hands that time back to the scroll
+         instead of competing with it. The sweep's clock pauses too, so the head
+         picks up where it left off rather than jumping.
+         Phones only: this is a fix for a phone crash, and desktop was fine. */
+      var scrolling = false, scrollT = null;
+      if (PHONE) {
+        window.addEventListener("scroll", function () {
+          scrolling = true;
+          clearTimeout(scrollT);
+          scrollT = setTimeout(function () { scrolling = false; autoLast = 0; dirty = true; }, 140);
+        }, { passive: true });
+      }
+
       function loop() {
         if (disposed) return;
         raf = requestAnimationFrame(loop);
-        if (!visible || document.hidden) { autoLast = 0; return; }   // pause the sweep's clock, don't reset it
+        if (!visible || document.hidden || scrolling) { autoLast = 0; return; }   // pause the sweep's clock, don't reset it
         if (autoSpin && headPts.length) autoPlace(performance.now());
         var moved = controls.update();
         if (!moved && !dirty) return;
