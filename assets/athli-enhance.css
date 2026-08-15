@@ -451,6 +451,15 @@ html.dark #main::before {
 .glass-button {
   --border-width: clamp(1px, 0.0625em, 4px);
   all: unset;
+  /* all:unset leaves this as display:inline. An inline box with a block child
+     (.glass-button-text) fragments across line boxes, and EVERY fragment paints
+     its own background, its own box-shadow glow and its own ::after ring — a
+     hard seam through the middle of the label plus an offset rectangular halo.
+     The abspos ::after also resolves inset:0 against the union of the fragments,
+     which is what squares the glow off. inline-flex gives it one real box. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   position: relative;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
@@ -567,9 +576,8 @@ html.dark .ath-hero-badge { filter: invert(1) hue-rotate(180deg); }
    Reuses the glass-button base above; only the fill/glow/text colour change.
    ========================================================================== */
 .ath-nav-cta { font-size: 16px; }   /* drives the em-based glass sizing for the nav */
-/* all:unset leaves .glass-button as display:inline, so its background only paints
-   the text line-strip; make the CTA fill its box so the haze tint covers the pill. */
-.ath-nav-cta .glass-button { display: inline-flex; align-items: center; justify-content: center; }
+/* (the display fix that makes the haze tint cover the whole pill now lives on
+   the .glass-button base rule, so every instance gets it) */
 /* optical centering: nudge the label UP slightly so it reads perfectly centered
    in the pill (the bottom inset shadow makes a math-centered label look low) */
 .ath-nav-cta .glass-button-text { top: -0.05em; }
@@ -1812,6 +1820,18 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   box-shadow: 0 1px 2px rgba(25, 45, 100, 0.09), 0 8px 20px -8px rgba(25, 45, 100, 0.2);
 }
 .ath-demo__stage.is-deferred .ath-demo__load { display: inline-flex; }
+/* left:50% caps the shrink-to-fit width at half the stage, so the label wraps
+   mid-phrase without this. */
+.ath-demo__load { white-space: nowrap; }
+/* One line of context under the poster button, so an unstarted stage reads as
+   a deliberate offer rather than an empty box. */
+.ath-demo__stage.is-deferred::after {
+  content: "Runs right here in your browser";
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, 32px);
+  font-size: 12.5px; color: rgba(15, 57, 139, 0.5);
+  white-space: nowrap; pointer-events: none;
+}
 
 .ath-demo__hint {
   position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
@@ -2284,4 +2304,22 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   }
   .ath-demo__foot { align-items: center; text-align: center; }
   .ath-demo .ath-demo__cta { margin-left: auto; margin-right: auto; }
+
+  /* --- Keep the phone's compositor free enough to scroll ------------------ */
+  /* Sections parked by idleOffscreen() (JS) stop animating entirely. Nothing
+     under them is on screen, so this is invisible — it just stops the phone
+     paying for the pricing sheen and sparks all the way down the page. */
+  .is-idle, .is-idle * { animation-play-state: paused !important; }
+
+  /* The lit dial ticks each carry their own drop-shadow, and each SVG filter
+     is a separate surface for the compositor: 30 of them in one 150px-wide
+     illustration. The gradient stroke alone reads the same at this size. */
+  .ath-dial-tick.is-on { filter: none; }
+  .ath-dial-tick { transition: stroke 0.35s ease; }
+
+  /* The tap-to-start poster for the 3D demo (see PHONE_GATE): give it a bit
+     more presence than the metered-connection case, since on a phone this is
+     the normal state rather than the exception. */
+  .ath-demo__stage.is-deferred .ath-demo__load { font-size: 15px; padding: 12px 22px; }
+  .ath-demo__stage.is-deferred .ath-demo__hint { opacity: 0 !important; }
 }

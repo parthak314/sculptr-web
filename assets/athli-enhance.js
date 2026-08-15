@@ -522,9 +522,13 @@
       about.style.display = "none";                 // get rid of the body of text
       var anchor = about.closest('[data-framer-name="Container"]') || about;
       if (!document.querySelector(".ath-heroshot") && anchor.parentNode) {
+        // 2818x1363 decodes to 14.65 MB for a slot that is 340px wide on a
+        // phone. hero-app-mobile.webp is the same shot at 900w (1.49 MB) — it
+        // was already sitting in assets/ unreferenced. Phones take that one.
+        var mob = el("source", { media: "(max-width: 860px)", srcset: "assets/hero-app-mobile.webp", type: "image/webp" });
         var source = el("source", { srcset: "assets/hero-app.webp", type: "image/webp" });
         var img = el("img", { class: "ath-heroshot__img", src: "assets/hero-app.jpg", alt: "Sculptr Studio — 2D consult", decoding: "async" });
-        var pic = el("picture", null, [source, img]);
+        var pic = el("picture", null, [mob, source, img]);
         var frame = el("div", { class: "ath-heroshot__frame" }, [pic]);
         var wrap = el("div", { class: "ath-heroshot" }, [frame]);
         anchor.parentNode.insertBefore(wrap, anchor);
@@ -1027,6 +1031,12 @@
        allocates GPU memory. It is bounded too: ~1s per interaction, not a
        per-scroll-frame cost. */
     var CHASE_K = 12;   // easing rate /s (matches the old 0.18-per-frame feel at 60fps)
+    /* The unscaled rAF the comment above refers to. It was used but never
+       declared, so every chaser.set() threw ReferenceError before it could
+       write a digit — the calculator's figures sat frozen at their initial
+       values on the live site. Called through a wrapper rather than held as a
+       bare reference, which would be an illegal invocation off `window`. */
+    function RAF0(fn) { return window.requestAnimationFrame(fn); }
     function chaser(node) {
       var cur = 0, target = 0, raf = null, last = 0, shown = null;
       /* Mutate the existing text node in place rather than reassigning
@@ -1935,7 +1945,25 @@
       if (f.imgs.length) {
         var slides = "", inds = "";
         for (var s = 0; s < f.imgs.length; s++) {
-          slides += '<img class="ath-feat__img' + (s === 0 ? " is-on" : "") + '" src="/images/features/' + f.imgs[s] + '.webp"'
+          // Every slide of every feature stays in the DOM (the panes are stacked
+          // in one grid cell so the card can't resize between tabs), so all 13
+          // screenshots decode at once. At 1600w that was 63 MB of image memory
+          // on a phone showing them in a ~305px slot — enough, with the rest of
+          // the page, to get the tab killed. Two things fix it: srcset, so the
+          // phone takes the 960w copy; and on phones, holding the src back on
+          // the panes nobody has opened yet (see hydrate() in wire()). The
+          // media box carries its own aspect-ratio, so an image with no src
+          // still occupies exactly the right space and the card keeps its
+          // locked height either way.
+          var base = "/images/features/" + f.imgs[s];
+          var srcA = base + ".webp";
+          var setA = base + "-960.webp 960w, " + base + "-1280.webp 1280w, " + srcA + " 1600w";
+          slides += '<img class="ath-feat__img' + (s === 0 ? " is-on" : "") + '"'
+            + (on ? ' src="' + srcA + '" srcset="' + setA + '"' : ' data-src="' + srcA + '" data-srcset="' + setA + '"')
+            // Measured, not guessed: the media box is 74vw at 320 rising to 86vw
+            // at 860, and 640px in the desktop grid. 80vw keeps a 390px phone at
+            // DPR 3 on the 960w file instead of overshooting to 1600w.
+            + ' sizes="(max-width: 860px) 80vw, 640px"'
             + ' alt="' + f.name.replace(/&amp;/g, "and") + ' in the Sculptr app" loading="lazy" decoding="async" draggable="false">';
           inds += '<button type="button" class="ath-feat__ind' + (s === 0 ? " is-on" : "") + '" data-slide="' + s + '"'
             + ' aria-label="Screenshot ' + (s + 1) + " of " + f.imgs.length + '"><span class="ath-feat__ind-fill"></span></button>';
@@ -2016,6 +2044,21 @@
         }
       }
 
+      /* Give a pane's images their real src. Panes other than the opening one
+         ship with data-src only; see the note where the markup is built. */
+      function hydrate(pane) {
+        if (!pane || pane.__athImgs) return;
+        pane.__athImgs = 1;
+        var im = pane.querySelectorAll(".ath-feat__img[data-src]");
+        for (var i = 0; i < im.length; i++) {
+          im[i].setAttribute("srcset", im[i].getAttribute("data-srcset"));
+          im[i].setAttribute("src", im[i].getAttribute("data-src"));
+          im[i].removeAttribute("data-src"); im[i].removeAttribute("data-srcset");
+        }
+      }
+      var phone = false;
+      try { phone = !!(window.matchMedia && window.matchMedia("(max-width: 860px)").matches); } catch (e) {}
+
       function select(idx) {
         for (var t = 0; t < tabs.length; t++) {
           var on = t === idx;
@@ -2028,11 +2071,16 @@
           // so the card keeps one height across features and the swap is a real
           // cross-fade instead of a collapse-and-reopen.
           pane.classList.toggle("is-active", on);
-          if (on) runSlides(pane);
+          if (on) { hydrate(pane); runSlides(pane); }
         }
       }
       for (var i = 0; i < tabs.length; i++) {
         (function (idx) {
+          // Start the fetch on first touch rather than on the click, so the
+          // screenshot is usually decoded by the time the pane fades in.
+          tabs[idx].addEventListener("touchstart", function () {
+            hydrate(sec.querySelector("#ath-feat-pane-" + FEATURES[idx].id));
+          }, { passive: true });
           tabs[idx].addEventListener("click", function () { select(idx); });
           tabs[idx].addEventListener("keydown", function (e) {
             var next = null;
@@ -2055,6 +2103,21 @@
         new IntersectionObserver(function (es) { visible = es[0].isIntersecting; }, { threshold: 0.1 }).observe(sec);
       } catch (e) {}
       runSlides(sec.querySelector(".ath-feat__pane.is-active"));
+      // Only phones pay the memory price worth optimising for, so everywhere
+      // else the panes fill in as soon as the section is reached and the tabs
+      // behave exactly as they did before.
+      function hydrateAll() {
+        var pn = sec.querySelectorAll(".ath-feat__pane");
+        for (var i = 0; i < pn.length; i++) hydrate(pn[i]);
+      }
+      if (!phone) {
+        try {
+          var hio = new IntersectionObserver(function (es) {
+            for (var i = 0; i < es.length; i++) if (es[i].isIntersecting) { hio.disconnect(); hydrateAll(); break; }
+          }, { rootMargin: "400px 0px" });
+          hio.observe(sec);
+        } catch (e) { hydrateAll(); }
+      }
     }
 
     function build() {
@@ -2136,6 +2199,10 @@
         return !!c.saveData || /^(slow-)?2g$/.test(c.effectiveType || "");
       } catch (e) { return false; }
     }
+    // Phones get the same treatment: tap to start, so the WebGL context and the
+    // ~1.2 MB of scene assets are never created just by scrolling past.
+    var PHONE_GATE = false;
+    try { PHONE_GATE = !!(window.matchMedia && window.matchMedia("(max-width: 860px)").matches); } catch (e) {}
     function hasWebGL() {
       try {
         var c = document.createElement("canvas");
@@ -2608,8 +2675,12 @@
       }, true);
 
       var loadBtn = sec.querySelector(".ath-demo__load");
-      if (frugal()) {
-        // Metered connection: wait for an explicit tap before spending the data.
+      if (frugal() || PHONE_GATE) {
+        // Metered connection — or any phone. A phone browser already runs one
+        // WebGL context for the Framer background gradient; standing a second
+        // one up for the scene, on a 10,000px page, is what pushes the tab over
+        // its memory ceiling and gets it killed mid-scroll. So on phones the
+        // context only ever exists if someone asks for it.
         sec.querySelector(".ath-demo__stage").classList.add("is-deferred");
         loadBtn.addEventListener("click", function () { sec.querySelector(".ath-demo__stage").classList.remove("is-deferred"); boot(sec); });
       } else {
@@ -2627,6 +2698,43 @@
     try {
       new MutationObserver(function () { if (pending) return; pending = true; requestAnimationFrame(function () { pending = false; build(); }); })
         .observe(document.body, { childList: true, subtree: true });
+    } catch (e) {}
+  }
+
+  /* --------------- phones: park sections that aren't on screen ------------- */
+  /* Measured at 390px: 22 infinite animations running at all times, nearly all
+     of them in the pricing block — the sheen repaints gradient-clipped text
+     every frame, and Framer ships one copy of a composition per breakpoint, so
+     the hidden variants animate too. None of it is visible unless that section
+     is on screen, but the phone pays for all of it for the whole 10,000px of
+     the page, on top of the compositing. Park a section when it leaves the
+     viewport; it picks up again on the way back. */
+  function idleOffscreen() {
+    var phone = false;
+    try { phone = !!(window.matchMedia && window.matchMedia("(max-width: 860px)").matches); } catch (e) {}
+    if (!phone || !window.IntersectionObserver) return;
+    var SEL = ".ath-below, .ath-stats, .ath-calc, .ath-pr, .ath-roadmap, .ath-feat,"
+            + " .ath-demo, .ath-logos, .ath-cg-section";
+    var io = new IntersectionObserver(function (es) {
+      for (var i = 0; i < es.length; i++) {
+        // 200px of slack, so a section is always awake before it's on screen.
+        es[i].target.classList.toggle("is-idle", !es[i].isIntersecting);
+      }
+    }, { rootMargin: "200px 0px" });
+    function scan() {
+      var n = document.querySelectorAll(SEL);
+      for (var i = 0; i < n.length; i++) if (!n[i].__athIdle) { n[i].__athIdle = 1; io.observe(n[i]); }
+    }
+    scan();
+    // The sections are injected across several frames (and re-injected when
+    // Framer re-renders), so keep looking rather than scanning once.
+    try {
+      var pending = false;
+      new MutationObserver(function () {
+        if (pending) return;
+        pending = true;
+        requestAnimationFrame(function () { pending = false; scan(); });
+      }).observe(document.body, { childList: true, subtree: true });
     } catch (e) {}
   }
 
@@ -2692,6 +2800,7 @@
     buildHeroBadge();
     var extras = buildScrollExtras();
     wireScroll(built.nav, built.ctaText, extras.bar, extras.toTop);
+    idleOffscreen();
     // Default theme is light; we only ever go dark when the user explicitly
     // chooses it (persisted in localStorage). No OS-preference auto-dark.
   }
