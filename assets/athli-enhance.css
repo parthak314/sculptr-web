@@ -2294,6 +2294,22 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   .ath-demo__foot { align-items: center; text-align: center; }
   .ath-demo .ath-demo__cta { margin-left: auto; margin-right: auto; }
 
+  /* --- the line through the middle of the demo CTA ----------------------- */
+  /* all:unset leaves the anchor display:inline, and an inline box with a block
+     child is split into three fragments: the real box plus a zero-width one on
+     each side of the split, both landing at the button's midpoint. Empty as
+     they are, they still paint their own box-shadow glow and ::after rim — a
+     thin vertical line of light straight through "Request Access". Measured:
+     getClientRects() returns 3 boxes, two of them 0px wide at x=195.
+     inline-flex makes it a single box. transform:none holds the pill at the
+     exact size it renders at today: transforms don't apply to inline boxes, so
+     the component's resting scale(0.975) only starts biting once it stops
+     being one, and without this the button would quietly shrink 2.5%. */
+  .ath-demo__cta .glass-button {
+    display: inline-flex; align-items: center; justify-content: center;
+    transform: none;
+  }
+
   /* --- Keep the phone's compositor free enough to scroll ------------------ */
   /* Sections parked by idleOffscreen() (JS) stop animating entirely. Nothing
      under them is on screen, so this is invisible — it just stops the phone
