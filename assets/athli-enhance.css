@@ -1701,6 +1701,26 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   font-weight: 650;
   text-shadow: 0 0.08em 0.35em rgba(255, 255, 255, 0.55);
 }
+/* The rim's conic gradient carries rgba(0,0,0,0.5) stops — right for the glass
+   button's original home on dark, photographic ground, where they read as the
+   unlit side of a glass edge. On a near-white section they land as a hard grey
+   arc across the top-left of the pill: a pencil scratch on the button, not a
+   highlight, and the thing that made the CTA's glow look wrong even once the
+   pill itself was painting correctly. Same rim, same angle, brand blue at a
+   fraction of the contrast, over a slightly stronger white base. Only the pale
+   tone needs it — on --haze (the navy nav CTA) a dark rim is still correct. */
+.glass-button--haze-light .glass-button::after {
+  background:
+    conic-gradient(
+      from var(--angle-1) at 50% 50%,
+      rgba(21, 96, 189, 0.22),
+      rgba(21, 96, 189, 0) 5% 40%,
+      rgba(21, 96, 189, 0.22) 50%,
+      rgba(21, 96, 189, 0) 60% 95%,
+      rgba(21, 96, 189, 0.22)
+    ),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.65));
+}
 
 /* =============================================================================
    Studio demo — a live slice of the app's editor.
