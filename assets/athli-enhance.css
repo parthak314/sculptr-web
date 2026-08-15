@@ -451,15 +451,6 @@ html.dark #main::before {
 .glass-button {
   --border-width: clamp(1px, 0.0625em, 4px);
   all: unset;
-  /* all:unset leaves this as display:inline. An inline box with a block child
-     (.glass-button-text) fragments across line boxes, and EVERY fragment paints
-     its own background, its own box-shadow glow and its own ::after ring — a
-     hard seam through the middle of the label plus an offset rectangular halo.
-     The abspos ::after also resolves inset:0 against the union of the fragments,
-     which is what squares the glow off. inline-flex gives it one real box. */
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   cursor: pointer;
   position: relative;
   -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
@@ -576,8 +567,9 @@ html.dark .ath-hero-badge { filter: invert(1) hue-rotate(180deg); }
    Reuses the glass-button base above; only the fill/glow/text colour change.
    ========================================================================== */
 .ath-nav-cta { font-size: 16px; }   /* drives the em-based glass sizing for the nav */
-/* (the display fix that makes the haze tint cover the whole pill now lives on
-   the .glass-button base rule, so every instance gets it) */
+/* all:unset leaves .glass-button as display:inline, so its background only paints
+   the text line-strip; make the CTA fill its box so the haze tint covers the pill. */
+.ath-nav-cta .glass-button { display: inline-flex; align-items: center; justify-content: center; }
 /* optical centering: nudge the label UP slightly so it reads perfectly centered
    in the pill (the bottom inset shadow makes a math-centered label look low) */
 .ath-nav-cta .glass-button-text { top: -0.05em; }
@@ -1700,26 +1692,6 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   color: rgba(21, 96, 189, 0.9);
   font-weight: 650;
   text-shadow: 0 0.08em 0.35em rgba(255, 255, 255, 0.55);
-}
-/* The rim's conic gradient carries rgba(0,0,0,0.5) stops — right for the glass
-   button's original home on dark, photographic ground, where they read as the
-   unlit side of a glass edge. On a near-white section they land as a hard grey
-   arc across the top-left of the pill: a pencil scratch on the button, not a
-   highlight, and the thing that made the CTA's glow look wrong even once the
-   pill itself was painting correctly. Same rim, same angle, brand blue at a
-   fraction of the contrast, over a slightly stronger white base. Only the pale
-   tone needs it — on --haze (the navy nav CTA) a dark rim is still correct. */
-.glass-button--haze-light .glass-button::after {
-  background:
-    conic-gradient(
-      from var(--angle-1) at 50% 50%,
-      rgba(21, 96, 189, 0.22),
-      rgba(21, 96, 189, 0) 5% 40%,
-      rgba(21, 96, 189, 0.22) 50%,
-      rgba(21, 96, 189, 0) 60% 95%,
-      rgba(21, 96, 189, 0.22)
-    ),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.65));
 }
 
 /* =============================================================================
