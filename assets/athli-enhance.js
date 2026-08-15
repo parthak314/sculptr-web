@@ -546,6 +546,8 @@
   /* Make the two hero buttons a touch smaller and nudge them up. Targets the
      lowest common ancestor of the two button links (their shared row). */
   function tweakHeroButtons() {
+    var HERO_NOGLOW = false;
+    try { HERO_NOGLOW = !!(window.matchMedia && window.matchMedia("(max-width: 860px)").matches); } catch (e) {}
     function label(txt) {
       var ps = document.querySelectorAll("p.framer-text");
       for (var i = 0; i < ps.length; i++) { if ((ps[i].textContent || "").trim() === txt) return ps[i]; }
@@ -565,6 +567,25 @@
       var raBtn = ra.closest("a") || ra.parentElement;
       var row = lca(fomBtn, raBtn);
       if (row && !row.classList.contains("ath-cta-row")) row.classList.add("ath-cta-row");
+      /* Phones: drop the glow behind the hero CTA. It is an absolutely
+         positioned layer inside the anchor — a navy radial gradient under
+         filter: blur(10px) — and on a phone it comes out as a hard-edged
+         rectangle of light around the pill instead of a halo. Matched on the
+         blur rather than the class, because Framer regenerates class names on
+         every publish; "Find Out More" carries no such layer, so the two hero
+         buttons end up consistent. */
+      if (HERO_NOGLOW) {
+        var btns = [raBtn, fomBtn];
+        for (var bi = 0; bi < btns.length; bi++) {
+          if (!btns[bi]) continue;
+          var kids = btns[bi].querySelectorAll("*");
+          for (var ki = 0; ki < kids.length; ki++) {
+            if (kids[ki].style.display === "none") continue;   // no repeat writes -> no mutation loop
+            var kc = getComputedStyle(kids[ki]);
+            if (kc.position === "absolute" && kc.filter.indexOf("blur(") > -1) kids[ki].style.display = "none";
+          }
+        }
+      }
       // "Find Out More" -> smooth-scroll to the How it works section (capture
       // phase + stopPropagation so it beats Framer's own anchor handler).
       if (fomBtn && fomBtn.getAttribute("data-ath-how") !== "1") {

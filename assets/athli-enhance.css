@@ -2304,13 +2304,10 @@ iframe[src*="framer.com/edit"], iframe[src*="framer.com/_edit"] { display: none 
   .ath-trust__icon { opacity: 1; color: rgba(15, 57, 139, 0.62); }
   .ath-trust__note { font-size: 12px; line-height: 1.65; color: rgba(15, 57, 139, 0.68); }
 
-  /* --- Hero CTA glow: stop slicing it into a rectangle -------------------- */
-  /* .framer-d498g3 is 320x181 with overflow:hidden and its child overflows it
-     by 14px top and bottom, so the button's round halo gets cut off square.
-     Neither it nor .framer-1dci305 paints anything — no background, no border,
-     measured — so the clip is doing nothing except cutting the glow. */
-  #main .framer-d498g3,
-  #main .framer-1dci305 { overflow: visible !important; }
+  /* (the hero CTA's clipped halo used to be un-clipped here by forcing
+     overflow:visible on two Framer wrappers. The glow itself is removed on
+     phones now — see HERO_NOGLOW in the JS — so there is nothing left to
+     un-clip, and the !important overrides on Framer internals can go.) */
 
   /* --- Centre the section heads and their copy --------------------------- */
   /* The titles are width:fit-content — the gradient is measured across the
