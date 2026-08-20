@@ -1182,9 +1182,6 @@
       { q: "Sculptr changed the consultation completely. Patients see themselves, not someone else\u2019s before and after. Conversion followed almost immediately.",
         a: "Dr. Ahdie Pooladi, MD", r: "15 years experience in Aesthetic medicine \u2014 Leeds",
         img: "/images/testimonials/pooladi.webp" },
-      { q: "Before Sculptr I relied on stock photos and hand mirrors, which never really landed. Now the patient sees a simulation of their own face and the conversation shifts from convincing to planning. Our treatment plan sign-off rate has climbed noticeably.",
-        a: "Dr. Karla Diaz, MD", r: "Award winning doctor \u2014 London",
-        img: "/images/testimonials/diaz.webp" },
       { q: "We already had a 3D scanner in the clinic. Sculptr gives better quality simulations, it is far easier to work with, and all three of our doctors can use it at once. The scanner sits idle now.",
         a: "Dr. Haidar Hassan, DDS MSc", r: "Clinical Senior Lecturer and Aesthetic Doctor \u2014 London",
         img: "/images/testimonials/hassan.webp" }
@@ -1219,6 +1216,10 @@
             + '<img class="ath-tm__card-img" src="' + t.img + '" alt="' + esc(t.a) + '" loading="lazy" draggable="false">'
             + '</button>';
         }
+        // With fewer authors than columns the tail columns come out empty, and an
+        // empty flex child still pulls its gap — enough to shove the cluster off
+        // centre. Emit nothing instead.
+        if (!cells) return "";
         return '<div class="ath-tm__col ath-tm__col--' + (mod + 1) + '">' + cells + '</div>';
       }
       return '<div class="ath-tm" data-anim="up">'
